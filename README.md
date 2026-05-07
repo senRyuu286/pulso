@@ -45,6 +45,36 @@ In the modern digital landscape, social products rely on four critical foundatio
 | **Navigation** | GoRouter |
 | **Testing** | flutter_test + Mockito |
 
+## Setup & Environment
+
+To protect sensitive credentials, this project uses environment variables for Supabase configuration.
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/senRyuu286/pulso.git
+   cd pulso
+   ```
+
+2. **Configure environment variables:**
+   Copy the example environment file and fill in your Supabase credentials:
+   ```bash
+   cp .env.example .env
+   ```
+   Ensure your `.env` file contains the following keys (found in your Supabase Project Settings > API):
+   * `SUPABASE_URL`: Your Supabase project URL.
+   * `SUPABASE_PUBLISHABLE_KEY`: Your Supabase anonymous (anon) public key.
+
+3. **Install dependencies:**
+   ```bash
+   flutter pub get
+   ```
+
+4. **Run the app:**
+   You can run the app using the `.env` file or by passing variables directly via `--dart-define`:
+   ```bash
+   flutter run --dart-define=SUPABASE_URL=your_url --dart-define=SUPABASE_PUBLISHABLE_KEY=your_key
+   ```
+
 ## App Screenshots
 *TBI (To Be Inserted)*
 
