@@ -72,7 +72,7 @@ To protect sensitive credentials, this project uses environment variables for Su
 4. **Run the app:**
    You can run the app using the `.env` file or by passing variables directly via `--dart-define`:
    ```bash
-   flutter run --dart-define=SUPABASE_URL=your_url --dart-define=SUPABASE_PUBLISHABLE_KEY=your_key
+   flutter run --dart-define-from-file=.env
    ```
 
 ## App Screenshots
