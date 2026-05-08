@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../providers/auth_notifier.dart';
@@ -19,8 +18,31 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  String? _localError;
-  bool _didListen = false;
+
+  String? emailError;
+  String? passwordError;
+
+  bool get _isFormValid {
+    return emailController.text.trim().isNotEmpty &&
+        emailController.text.contains('@') &&
+        passwordController.text.length >= 6;
+  }
+
+  bool get _isEmailValid {
+    return emailController.text.trim().isNotEmpty &&
+        emailController.text.contains('@');
+  }
+
+  bool get _isPasswordValid {
+    return passwordController.text.length >= 6;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.addListener(_handleInputChanged);
+    passwordController.addListener(_handleInputChanged);
+  }
 
   @override
   void dispose() {
@@ -29,102 +51,175 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  void _signIn() {
-    final email = emailController.text.trim();
-    final password = passwordController.text;
-    if (email.isEmpty || password.isEmpty || !email.contains('@')) {
+  void _handleInputChanged() {
+    setState(() {
+      if (_isEmailValid) {
+        emailError = null;
+      }
+      if (_isPasswordValid) {
+        passwordError = null;
+      }
+    });
+  }
+
+  void _handleSignIn() {
+    final isEmailValid = _isEmailValid;
+    final isPasswordValid = _isPasswordValid;
+
+    if (!isEmailValid || !isPasswordValid) {
       setState(() {
-        _localError = 'Please enter a valid email and password.';
+        emailError = isEmailValid ? null : 'Enter a valid email address.';
+        passwordError =
+            isPasswordValid ? null : 'Password must be at least 6 characters.';
       });
       return;
     }
-    setState(() {
-      _localError = null;
-    });
-    ref.read(authNotifierProvider.notifier).signIn(email, password);
+
+    ref.read(authNotifierProvider.notifier).signIn(
+          emailController.text.trim(),
+          passwordController.text,
+        );
+  }
+
+  Widget _buildFieldError(String? text, Color color) {
+    return Visibility(
+      visible: text != null,
+      maintainSize: true,
+      maintainAnimation: true,
+      maintainState: true,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(
+          text ?? '',
+          style: AppTextStyles.caption.copyWith(color: color),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authNotifierProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark ? AppColors.surfaceD : AppColors.surfaceL;
+    final textPrimary =
+        isDark ? AppColors.textPrimaryD : AppColors.textPrimaryL;
+    final textSecondary =
+        isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
     final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
+    final logo = isDark
+        ? Image.asset('assets/logo/logo-dark.png', width: 100)
+        : Image.asset('assets/logo/logo-light.png', width: 100);
+    ref.listen<AuthState>(authNotifierProvider, (previous, next) {
+      if (next is AuthSuccess) {
+        context.go('/feed');
+      }
+    });
 
-    if (!_didListen) {
-      _didListen = true;
-      ref.listen<AuthState>(authNotifierProvider, (previous, next) {
-        if (next is AuthSuccess && mounted) {
-          context.go(AppRoutes.feed);
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go('/welcome');
         }
-      });
-    }
-
-    final errorText = state is AuthError
-        ? state.exception.message
-        : _localError;
-
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 80),
-              Column(
+      },
+      child: Scaffold(
+        backgroundColor: surface,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.monitor_heart_outlined,
-                    size: 48,
-                    color: primary,
-                  ),
                   const SizedBox(height: 12),
+                  Center(child: logo),
+                  const SizedBox(height: 10),
                   Text(
-                    'Pulso',
-                    style: AppTextStyles.display.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: primary,
+                    'Welcome back',
+                    style: AppTextStyles.headline.copyWith(
+                      color: textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Sign in to your account',
+                    style: AppTextStyles.body.copyWith(
+                      color: textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Your email address',
+                    style: AppTextStyles.label.copyWith(
+                      color: textSecondary,
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  AuthTextField(
+                    controller: emailController,
+                    hintText: 'you@example.com',
+                    keyboardType: TextInputType.emailAddress,
+                    errorText: null,
+                  ),
+                  _buildFieldError(emailError, primary),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Password',
+                    style: AppTextStyles.label.copyWith(
+                      color: textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  AuthTextField(
+                    controller: passwordController,
+                    hintText: 'Enter your password',
+                    obscureText: true,
+                    errorText: null,
+                  ),
+                  _buildFieldError(passwordError, primary),
+                  const SizedBox(height: 6),
+                  if (state is AuthError)
+                    Text(
+                      state.exception.message,
+                      style: AppTextStyles.caption.copyWith(
+                        color: primary,
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  const SizedBox(height: 24),
+                  PrimaryButton(
+                    label: 'Continue ›',
+                    onPressed: _isFormValid ? _handleSignIn : null,
+                    isLoading: state is AuthLoading,
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () => context.go('/register'),
+                        child: Text(
+                          'Don\'t have an account?',
+                          style: AppTextStyles.label.copyWith(color: primary),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/register'),
+                        child: Text(
+                          'Register',
+                          style: AppTextStyles.label.copyWith(color: primary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
-              const SizedBox(height: 48),
-              AuthTextField(
-                controller: emailController,
-                hintText: 'Email',
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              AuthTextField(
-                controller: passwordController,
-                hintText: 'Password',
-                obscureText: true,
-              ),
-              const SizedBox(height: 8),
-              if (errorText != null)
-                Text(
-                  errorText,
-                  style: AppTextStyles.caption.copyWith(color: primary),
-                )
-              else
-                const SizedBox.shrink(),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'Sign In',
-                onPressed: state is AuthLoading ? null : _signIn,
-                isLoading: state is AuthLoading,
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  context.go(AppRoutes.register);
-                },
-                child: Text(
-                  'Don\'t have an account? Register',
-                  style: AppTextStyles.label.copyWith(color: primary),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
