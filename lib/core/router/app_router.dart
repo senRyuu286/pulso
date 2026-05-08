@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/data/providers/auth_providers.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/welcome_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -12,8 +13,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 	final user = authState.asData?.value;
 
 	return GoRouter(
-		initialLocation: AppRoutes.login,
+		initialLocation: AppRoutes.welcome,
 		routes: [
+			GoRoute(
+				path: AppRoutes.welcome,
+				builder: (context, state) => const WelcomeScreen(),
+			),
 			GoRoute(
 				path: AppRoutes.login,
 				builder: (context, state) => const LoginScreen(),
@@ -36,7 +41,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 			final isOnAuthRoute = AppRoutes.isAuthRoute(state.matchedLocation);
 
 			if (!isAuthed && !isOnAuthRoute) {
-				return AppRoutes.login;
+				return AppRoutes.welcome;
 			}
 
 			if (isAuthed && isOnAuthRoute) {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../providers/auth_notifier.dart';
@@ -22,8 +21,77 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
-  String? _localError;
-  bool _didListen = false;
+
+  String? usernameError;
+  String? emailError;
+  String? passwordError;
+  String? confirmError;
+
+  bool get _isFormValid {
+    return usernameController.text.trim().length >= 3 &&
+      _isValidEmail(emailController.text) &&
+        passwordController.text.length >= 6 &&
+        confirmPasswordController.text == passwordController.text;
+  }
+
+  bool get _isUsernameValid {
+    return usernameController.text.trim().length >= 3;
+  }
+
+  bool get _isEmailValid {
+    return _isValidEmail(emailController.text);
+  }
+
+  bool get _isPasswordValid {
+    return passwordController.text.length >= 6;
+  }
+
+  bool get _isConfirmValid {
+    return confirmPasswordController.text == passwordController.text &&
+        confirmPasswordController.text.isNotEmpty;
+  }
+
+  bool _isValidEmail(String value) {
+    final email = value.trim();
+    if (email.isEmpty) {
+      return false;
+    }
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    usernameController.addListener(() {
+      setState(() {
+        usernameError = null;
+      });
+    });
+    emailController.addListener(() {
+      setState(() {
+        emailError = null;
+      });
+    });
+    passwordController.addListener(() {
+      setState(() {
+        passwordError = null;
+        if (confirmPasswordController.text.isNotEmpty) {
+          confirmError =
+              confirmPasswordController.text != passwordController.text
+                  ? 'Passwords do not match'
+                  : null;
+        }
+      });
+    });
+    confirmPasswordController.addListener(() {
+      setState(() {
+        confirmError =
+            confirmPasswordController.text != passwordController.text
+                ? 'Passwords do not match'
+                : null;
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -34,130 +102,249 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
-  void _signUp() {
-    final username = usernameController.text.trim();
-    final email = emailController.text.trim();
-    final password = passwordController.text;
-    final confirmPassword = confirmPasswordController.text;
-
-    if (username.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty ||
-        confirmPassword.isEmpty ||
-        !email.contains('@') ||
-        password.length < 6) {
-      setState(() {
-        _localError = 'Please complete all fields with valid details.';
-      });
-      return;
-    }
-
-    if (password != confirmPassword) {
-      setState(() {
-        _localError = 'Passwords do not match';
-      });
-      return;
-    }
-
+  void _validateAndShowErrors() {
     setState(() {
-      _localError = null;
-    });
+      if (usernameController.text.trim().isEmpty) {
+        usernameError = 'Username is required';
+      } else if (usernameController.text.trim().length < 3) {
+        usernameError = 'Username must be at least 3 characters';
+      } else {
+        usernameError = null;
+      }
 
-    ref.read(authNotifierProvider.notifier).signUp(email, password, username);
+      if (emailController.text.trim().isEmpty) {
+        emailError = 'Email address is required';
+      } else if (!_isValidEmail(emailController.text)) {
+        emailError = 'Enter a valid email address';
+      } else {
+        emailError = null;
+      }
+
+      if (passwordController.text.isEmpty) {
+        passwordError = 'Password is required';
+      } else if (passwordController.text.length < 6) {
+        passwordError = 'Password must be at least 6 characters';
+      } else {
+        passwordError = null;
+      }
+
+      if (confirmPasswordController.text.isEmpty) {
+        confirmError = 'Please confirm your password';
+      } else if (confirmPasswordController.text != passwordController.text) {
+        confirmError = 'Passwords do not match';
+      } else {
+        confirmError = null;
+      }
+    });
+  }
+
+  void _handleSignUp() {
+    final isUsernameValid = _isUsernameValid;
+    final isEmailValid = _isEmailValid;
+    final isPasswordValid = _isPasswordValid;
+    final isConfirmValid = _isConfirmValid;
+
+    if (!isUsernameValid ||
+        !isEmailValid ||
+        !isPasswordValid ||
+        !isConfirmValid) {
+      setState(() {
+        usernameError =
+            isUsernameValid ? null : 'Username must be at least 3 characters.';
+        emailError = isEmailValid ? null : 'Enter a valid email address.';
+        passwordError =
+            isPasswordValid ? null : 'Password must be at least 6 characters.';
+        confirmError = isConfirmValid ? null : 'Passwords do not match';
+      });
+      return;
+    }
+
+    ref.read(authNotifierProvider.notifier).signUp(
+          emailController.text.trim(),
+          passwordController.text,
+          usernameController.text.trim(),
+        );
+  }
+
+  Widget _buildFieldError(String? text, Color color) {
+    return Visibility(
+      visible: text != null,
+      maintainSize: true,
+      maintainAnimation: true,
+      maintainState: true,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(
+          text ?? '',
+          style: AppTextStyles.caption.copyWith(color: color),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authNotifierProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark ? AppColors.surfaceD : AppColors.surfaceL;
+    final textPrimary =
+        isDark ? AppColors.textPrimaryD : AppColors.textPrimaryL;
+    final textSecondary =
+        isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
     final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
+    final logo = isDark
+        ? Image.asset('assets/logo/logo-dark.png', width: 100)
+        : Image.asset('assets/logo/logo-light.png', width: 100);
 
-    if (!_didListen) {
-      _didListen = true;
-      ref.listen<AuthState>(authNotifierProvider, (previous, next) {
-        if (next is AuthSuccess && mounted) {
-          context.go(AppRoutes.feed);
+    ref.listen<AuthState>(authNotifierProvider, (previous, next) {
+      if (next is AuthSuccess) {
+        context.go('/feed');
+      }
+    });
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go('/welcome');
         }
-      });
-    }
-
-    final errorText = state is AuthError
-        ? state.exception.message
-        : _localError;
-
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 80),
-              Column(
+      },
+      child: Scaffold(
+        backgroundColor: surface,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.monitor_heart_outlined,
-                    size: 48,
-                    color: primary,
-                  ),
                   const SizedBox(height: 12),
+                  Center(child: logo),
+                  const SizedBox(height: 10),
                   Text(
-                    'Pulso',
-                    style: AppTextStyles.display.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: primary,
+                    'Join Pulso',
+                    style: AppTextStyles.headline.copyWith(
+                      color: textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Create your account to get started',
+                    style: AppTextStyles.body.copyWith(
+                      color: textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Username',
+                    style: AppTextStyles.label.copyWith(
+                      color: textSecondary,
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  AuthTextField(
+                    controller: usernameController,
+                    hintText: '@username',
+                    errorText: null,
+                  ),
+                  _buildFieldError(usernameError, primary),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Your email address',
+                    style: AppTextStyles.label.copyWith(
+                      color: textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  AuthTextField(
+                    controller: emailController,
+                    hintText: 'you@example.com',
+                    keyboardType: TextInputType.emailAddress,
+                    errorText: null,
+                  ),
+                  _buildFieldError(emailError, primary),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Choose a password',
+                    style: AppTextStyles.label.copyWith(
+                      color: textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  AuthTextField(
+                    controller: passwordController,
+                    hintText: 'min. 6 characters',
+                    obscureText: true,
+                    errorText: null,
+                  ),
+                  _buildFieldError(passwordError, primary),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Confirm password',
+                    style: AppTextStyles.label.copyWith(
+                      color: textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  AuthTextField(
+                    controller: confirmPasswordController,
+                    hintText: 'Re-enter your password',
+                    obscureText: true,
+                    errorText: null,
+                  ),
+                  _buildFieldError(confirmError, primary),
+                  const SizedBox(height: 6),
+                  if (state is AuthError)
+                    Text(
+                      state.exception.message,
+                      style: AppTextStyles.caption.copyWith(
+                        color: primary,
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  const SizedBox(height: 24),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: _isFormValid
+                        ? null
+                        : (_) => _validateAndShowErrors(),
+                    onTap: _isFormValid ? null : _validateAndShowErrors,
+                    child: IgnorePointer(
+                      ignoring: !_isFormValid,
+                      child: PrimaryButton(
+                        label: 'Create Account ›',
+                        onPressed: _isFormValid ? _handleSignUp : null,
+                        isLoading: state is AuthLoading,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () => context.go('/login'),
+                        child: Text(
+                          'Already have an account?',
+                          style: AppTextStyles.label.copyWith(color: primary),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/login'),
+                        child: Text(
+                          'Sign In',
+                          style: AppTextStyles.label.copyWith(color: primary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
-              const SizedBox(height: 48),
-              AuthTextField(
-                controller: usernameController,
-                hintText: 'Username',
-              ),
-              const SizedBox(height: 16),
-              AuthTextField(
-                controller: emailController,
-                hintText: 'Email',
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              AuthTextField(
-                controller: passwordController,
-                hintText: 'Password',
-                obscureText: true,
-              ),
-              const SizedBox(height: 16),
-              AuthTextField(
-                controller: confirmPasswordController,
-                hintText: 'Confirm Password',
-                obscureText: true,
-              ),
-              const SizedBox(height: 8),
-              if (errorText != null)
-                Text(
-                  errorText,
-                  style: AppTextStyles.caption.copyWith(color: primary),
-                )
-              else
-                const SizedBox.shrink(),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'Create Account',
-                onPressed: state is AuthLoading ? null : _signUp,
-                isLoading: state is AuthLoading,
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  context.go(AppRoutes.login);
-                },
-                child: Text(
-                  'Already have an account? Sign In',
-                  style: AppTextStyles.label.copyWith(color: primary),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
