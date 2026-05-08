@@ -21,7 +21,11 @@ class FeedRepositoryImpl implements FeedRepository {
 
       final data = await client
           .from('posts')
-          .select('*, likes(user_id), profiles(username, avatar_url)')
+          .select('''
+            *,
+            likes(user_id),
+            author:profiles!posts_user_id_fkey(id, username, avatar_url)
+          ''')
           .order('created_at', ascending: false)
           .range(from, to);
 
@@ -68,7 +72,11 @@ class FeedRepositoryImpl implements FeedRepository {
             'image_url': imageUrl,
             'caption': caption,
           })
-          .select('*, likes(user_id), profiles(username, avatar_url)')
+          .select('''
+            *,
+            likes(user_id),
+            author:profiles!posts_user_id_fkey(id, username, avatar_url)
+          ''')
           .single();
 
       return Post.fromMap(data, currentUserId: userId);

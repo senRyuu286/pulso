@@ -23,7 +23,7 @@ class Post {
 
   factory Post.fromMap(Map<String, dynamic> map, {required String currentUserId}) {
     final likes = (map['likes'] as List?) ?? [];
-    final profile = map['profiles'] as Map<String, dynamic>?;
+    final profile = map['author'] as Map<String, dynamic>?;
     return Post(
       id: map['id'] as String,
       userId: map['user_id'] as String,

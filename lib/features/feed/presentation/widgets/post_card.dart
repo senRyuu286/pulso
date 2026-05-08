@@ -1,8 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/pulso_theme_extension.dart';
 import '../../../../core/widgets/neumorphic_container.dart';
 import '../../domain/models/post.dart';
 import 'like_button.dart';
@@ -28,7 +27,6 @@ class _PostCardState extends State<PostCard>
   late final Animation<double> _opacity;
   late final Animation<Offset> _slide;
 
-  // Caption expand/collapse
   bool _expanded = false;
 
   @override
@@ -40,11 +38,10 @@ class _PostCardState extends State<PostCard>
     );
     _opacity = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.06), // ~12dp at 200dp height
+      begin: const Offset(0, 0.06),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
 
-    // Stagger first 8 cards by 60ms each; beyond that — no delay
     final delay = widget.index < 8 ? widget.index * 60 : 0;
     Future.delayed(Duration(milliseconds: delay), () {
       if (mounted) _entryCtrl.forward();
@@ -59,55 +56,43 @@ class _PostCardState extends State<PostCard>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? AppColors.textPrimaryD : AppColors.textPrimaryL;
-    final textSecondary = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
-
     return FadeTransition(
       opacity: _opacity,
       child: SlideTransition(
         position: _slide,
         child: NeumorphicContainer(
           state: NeumorphicState.raised,
-          borderRadius: 20, // radius-md
+          borderRadius: 20,
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Header row ──────────────────────────────────────────────
-              _CardHeader(post: widget.post, textPrimary: textPrimary, textSecondary: textSecondary),
+              _CardHeader(post: widget.post),
               const SizedBox(height: 12),
-
-              // ── Post image (16:9, radius-sm) ─────────────────────────────
               AspectRatio(
                 aspectRatio: 16 / 9,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12), // radius-sm
+                  borderRadius: BorderRadius.circular(12),
                   child: CachedNetworkImage(
                     imageUrl: widget.post.imageUrl,
                     fit: BoxFit.cover,
-                    placeholder: (_, _) => _ImageSkeleton(isDark: isDark),
-                    errorWidget: (_, _, _) => _ImageError(isDark: isDark),
+                    placeholder: (_, _) => const _ImageSkeleton(),
+                    errorWidget: (_, _, _) => const _ImageError(),
                   ),
                 ),
               ),
-
-              // ── Caption ─────────────────────────────────────────────────
-              if (widget.post.caption != null && widget.post.caption!.isNotEmpty) ...[
+              if (widget.post.caption != null &&
+                  widget.post.caption!.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _Caption(
                   caption: widget.post.caption!,
                   expanded: _expanded,
                   onToggle: () => setState(() => _expanded = !_expanded),
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
                 ),
               ],
-
-              // ── Action row ───────────────────────────────────────────────
               const SizedBox(height: 12),
-              _ActionRow(post: widget.post, textSecondary: textSecondary),
+              _ActionRow(post: widget.post),
             ],
           ),
         ),
@@ -119,25 +104,17 @@ class _PostCardState extends State<PostCard>
 // ─── Header ──────────────────────────────────────────────────────────────────
 
 class _CardHeader extends StatelessWidget {
-  const _CardHeader({
-    required this.post,
-    required this.textPrimary,
-    required this.textSecondary,
-  });
+  const _CardHeader({required this.post});
 
   final Post post;
-  final Color textPrimary;
-  final Color textSecondary;
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Row(
       children: [
-        _Avatar(
-          size: 40,
-          avatarUrl: post.avatarUrl,
-          username: post.username,
-        ),
+        _Avatar(size: 40, avatarUrl: post.avatarUrl, username: post.username),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -145,19 +122,19 @@ class _CardHeader extends StatelessWidget {
             children: [
               Text(
                 post.username ?? 'User',
-                style: AppTextStyles.label.copyWith(color: textPrimary),
+                style: AppTextStyles.label.copyWith(color: cs.onSurface),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Text(
                 _timeAgo(post.createdAt),
-                style: AppTextStyles.timestamp.copyWith(color: textSecondary),
+                style: AppTextStyles.timestamp.copyWith(color: cs.onSurfaceVariant),
               ),
             ],
           ),
         ),
-        Icon(Icons.more_horiz_rounded, color: textSecondary, size: 20),
+        Icon(Icons.more_horiz_rounded, color: cs.onSurfaceVariant, size: 20),
       ],
     );
   }
@@ -183,50 +160,35 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryMuted = isDark ? AppColors.primaryMutedD : AppColors.primaryMutedL;
-    final amber = isDark ? AppColors.amberD : AppColors.amberL;
-    final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
-    final surface = isDark ? AppColors.surfaceD : AppColors.surfaceL;
+    final cs = Theme.of(context).colorScheme;
+    final pulso = context.pulso;
 
-    final initials = username?.isNotEmpty == true
-        ? username![0].toUpperCase()
-        : '?';
+    final initials =
+        username?.isNotEmpty == true ? username![0].toUpperCase() : '?';
+
+    final fallback = _InitialsAvatar(
+      initials: initials,
+      primaryMuted: pulso.primaryMuted,
+      amber: pulso.amber,
+      primary: cs.primary,
+      size: size,
+    );
 
     final avatar = avatarUrl != null
         ? CachedNetworkImage(
             imageUrl: avatarUrl!,
             fit: BoxFit.cover,
-            placeholder: (_, _) => _InitialsAvatar(
-              initials: initials,
-              primaryMuted: primaryMuted,
-              amber: amber,
-              primary: primary,
-              size: size,
-            ),
-            errorWidget: (_, _, _) => _InitialsAvatar(
-              initials: initials,
-              primaryMuted: primaryMuted,
-              amber: amber,
-              primary: primary,
-              size: size,
-            ),
+            placeholder: (_, _) => fallback,
+            errorWidget: (_, _, _) => fallback,
           )
-        : _InitialsAvatar(
-            initials: initials,
-            primaryMuted: primaryMuted,
-            amber: amber,
-            primary: primary,
-            size: size,
-          );
+        : fallback;
 
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        // 2dp border in surface color to lift off background
-        border: Border.all(color: surface, width: 2),
+        border: Border.all(color: cs.surface, width: 2),
       ),
       child: ClipOval(child: avatar),
     );
@@ -281,25 +243,21 @@ class _Caption extends StatelessWidget {
     required this.caption,
     required this.expanded,
     required this.onToggle,
-    required this.textPrimary,
-    required this.textSecondary,
   });
 
   final String caption;
   final bool expanded;
   final VoidCallback onToggle;
-  final Color textPrimary;
-  final Color textSecondary;
 
   @override
   Widget build(BuildContext context) {
-    final style = AppTextStyles.body.copyWith(color: textPrimary);
+    final cs = Theme.of(context).colorScheme;
+    final style = AppTextStyles.body.copyWith(color: cs.onSurface);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final span = TextSpan(text: caption, style: style);
         final tp = TextPainter(
-          text: span,
+          text: TextSpan(text: caption, style: style),
           maxLines: 2,
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: constraints.maxWidth);
@@ -319,7 +277,7 @@ class _Caption extends StatelessWidget {
                 onTap: onToggle,
                 child: Text(
                   expanded ? 'less' : 'see more',
-                  style: AppTextStyles.caption.copyWith(color: textSecondary),
+                  style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant),
                 ),
               ),
           ],
@@ -332,27 +290,25 @@ class _Caption extends StatelessWidget {
 // ─── Action Row ───────────────────────────────────────────────────────────────
 
 class _ActionRow extends StatelessWidget {
-  const _ActionRow({required this.post, required this.textSecondary});
+  const _ActionRow({required this.post});
 
   final Post post;
-  final Color textSecondary;
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Row(
       children: [
-        // Like — full heartbeat animation
         LikeButton(post: post),
         const SizedBox(width: 20),
-        // Comment (non-interactive placeholder for now)
         _IconStat(
           icon: Icons.chat_bubble_outline_rounded,
           count: 0,
-          color: textSecondary,
+          color: cs.onSurfaceVariant,
         ),
         const SizedBox(width: 20),
-        // Share
-        Icon(Icons.ios_share_rounded, size: 20, color: textSecondary),
+        Icon(Icons.ios_share_rounded, size: 20, color: cs.onSurfaceVariant),
       ],
     );
   }
@@ -372,10 +328,7 @@ class _IconStat extends StatelessWidget {
       children: [
         Icon(icon, size: 20, color: color),
         const SizedBox(width: 6),
-        Text(
-          '$count',
-          style: AppTextStyles.label.copyWith(color: color),
-        ),
+        Text('$count', style: AppTextStyles.label.copyWith(color: color)),
       ],
     );
   }
@@ -384,9 +337,7 @@ class _IconStat extends StatelessWidget {
 // ─── Skeleton / Error states ──────────────────────────────────────────────────
 
 class _ImageSkeleton extends StatefulWidget {
-  const _ImageSkeleton({required this.isDark});
-
-  final bool isDark;
+  const _ImageSkeleton();
 
   @override
   State<_ImageSkeleton> createState() => _ImageSkeletonState();
@@ -413,10 +364,10 @@ class _ImageSkeletonState extends State<_ImageSkeleton>
 
   @override
   Widget build(BuildContext context) {
-    final base = widget.isDark ? AppColors.surfaceRaisedD : AppColors.surfaceRaisedL;
-    final shimmerColor = widget.isDark
-        ? AppColors.primaryMutedD.withValues(alpha: 0.2)
-        : AppColors.primaryMutedL.withValues(alpha: 0.2);
+    final cs = Theme.of(context).colorScheme;
+    final pulso = context.pulso;
+    final base = cs.surfaceContainerHighest;
+    final shimmerColor = pulso.primaryMuted.withValues(alpha: 0.2);
 
     return AnimatedBuilder(
       animation: _shimmer,
@@ -435,16 +386,17 @@ class _ImageSkeletonState extends State<_ImageSkeleton>
 }
 
 class _ImageError extends StatelessWidget {
-  const _ImageError({required this.isDark});
-
-  final bool isDark;
+  const _ImageError();
 
   @override
   Widget build(BuildContext context) {
-    final color = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
+    final cs = Theme.of(context).colorScheme;
+    final pulso = context.pulso;
     return Container(
-      color: isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL,
-      child: Center(child: Icon(Icons.broken_image_outlined, color: color, size: 32)),
+      color: pulso.surfaceInset,
+      child: Center(
+        child: Icon(Icons.broken_image_outlined, color: cs.onSurfaceVariant, size: 32),
+      ),
     );
   }
 }

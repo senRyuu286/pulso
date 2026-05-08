@@ -1,16 +1,11 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/pulso_theme_extension.dart';
 import '../../../../core/widgets/neumorphic_container.dart';
 
 /// Inset neumorphic image drop-zone — design spec section 9.
-///
-/// Empty state: dashed primary-muted border, camera icon centered.
-/// Filled state: shows the selected image with a replace overlay on tap.
 class ImagePickerField extends StatefulWidget {
   const ImagePickerField({
     super.key,
@@ -34,44 +29,31 @@ class _ImagePickerFieldState extends State<ImagePickerField> {
       imageQuality: 85,
       maxWidth: 1440,
     );
-    if (picked != null) {
-      widget.onImageSelected(File(picked.path));
-    }
+    if (picked != null) widget.onImageSelected(File(picked.path));
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryMuted = isDark ? AppColors.primaryMutedD : AppColors.primaryMutedL;
-    final textSecondary = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
-    final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
+    final cs = Theme.of(context).colorScheme;
+    final pulso = context.pulso;
 
     return GestureDetector(
       onTap: _pick,
       child: AspectRatio(
         aspectRatio: 16 / 9,
         child: widget.selectedImage != null
-            ? _FilledZone(image: widget.selectedImage!, primaryMuted: primaryMuted)
-            : _EmptyZone(
-                primaryMuted: primaryMuted,
-                textSecondary: textSecondary,
-                primary: primary,
-              ),
+            ? _FilledZone(image: widget.selectedImage!, primaryMuted: pulso.primaryMuted)
+            : _EmptyZone(primaryMuted: pulso.primaryMuted, textSecondary: cs.onSurfaceVariant),
       ),
     );
   }
 }
 
 class _EmptyZone extends StatelessWidget {
-  const _EmptyZone({
-    required this.primaryMuted,
-    required this.textSecondary,
-    required this.primary,
-  });
+  const _EmptyZone({required this.primaryMuted, required this.textSecondary});
 
   final Color primaryMuted;
   final Color textSecondary;
-  final Color primary;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +62,6 @@ class _EmptyZone extends StatelessWidget {
       borderRadius: 20,
       child: Stack(
         children: [
-          // Dashed border overlay
           CustomPaint(
             painter: _DashedBorderPainter(color: primaryMuted, radius: 20),
             child: const SizedBox.expand(),
@@ -118,7 +99,6 @@ class _FilledZone extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.file(image, fit: BoxFit.cover),
-          // Tap-to-replace overlay
           Positioned(
             bottom: 12,
             right: 12,
@@ -140,39 +120,53 @@ class _FilledZone extends StatelessWidget {
   }
 }
 
+/// Dashed rounded-rectangle border.
+///
+/// Segments are computed once on first [paint] for a given [Size] and cached —
+/// [computeMetrics] + [extractPath] are NOT called on every animation frame.
 class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
+  _DashedBorderPainter({required this.color, required this.radius});
 
   final Color color;
   final double radius;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
+  static const double _dashWidth = 8.0;
+  static const double _dashGap   = 5.0;
+  static const double _strokeW   = 1.5;
+
+  Size? _cachedSize;
+  List<Path>? _segments;
+  late Paint _paint;
+
+  void _rebuild(Size size) {
+    _cachedSize = size;
+    _paint = Paint()
       ..color = color
-      ..strokeWidth = 1.5
+      ..strokeWidth = _strokeW
       ..style = PaintingStyle.stroke;
 
-    const dashWidth = 8.0;
-    const dashSpace = 5.0;
+    final outline = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(1, 1, size.width - 2, size.height - 2),
+        Radius.circular(radius),
+      ));
 
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(1, 1, size.width - 2, size.height - 2),
-      Radius.circular(radius),
-    );
-
-    final path = Path()..addRRect(rrect);
-    final metrics = path.computeMetrics();
-
-    for (final metric in metrics) {
-      double distance = 0;
-      while (distance < metric.length) {
-        canvas.drawPath(
-          metric.extractPath(distance, distance + dashWidth),
-          paint,
-        );
-        distance += dashWidth + dashSpace;
+    final segments = <Path>[];
+    for (final metric in outline.computeMetrics()) {
+      double d = 0;
+      while (d < metric.length) {
+        segments.add(metric.extractPath(d, d + _dashWidth));
+        d += _dashWidth + _dashGap;
       }
+    }
+    _segments = segments;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (_cachedSize != size) _rebuild(size);
+    for (final seg in _segments!) {
+      canvas.drawPath(seg, _paint);
     }
   }
 

@@ -1,17 +1,14 @@
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/models/post.dart';
 import '../providers/feed_notifier.dart';
 
 /// Full Pulso heartbeat like button — design spec section 5.2 + 6.
 ///
-/// Phase 1 — Tap down   (80ms):  scale 0.92, inset surface
-/// Phase 2 — Release    (150ms): scale 1.0,  raised surface, icon swaps
+/// Phase 1 — Tap down   (80ms):  scale 0.92
+/// Phase 2 — Release    (150ms): scale 1.0, icon swaps
 /// Phase 3 — Burst      (250ms): 6-dot particle ring in primary coral (liking only)
 /// Phase 4 — Count      (200ms): count slides up via AnimatedSwitcher
 class LikeButton extends ConsumerStatefulWidget {
@@ -52,7 +49,6 @@ class _LikeButtonState extends ConsumerState<LikeButton>
   @override
   void didUpdateWidget(LikeButton old) {
     super.didUpdateWidget(old);
-    // Burst fires when transitioning from unliked → liked
     if (!old.post.isLikedByMe && widget.post.isLikedByMe) {
       _burstCtrl.forward(from: 0.0);
     }
@@ -69,14 +65,12 @@ class _LikeButtonState extends ConsumerState<LikeButton>
     if (_isAnimating) return;
     _isAnimating = true;
 
-    // Phase 1: press in (80ms)
     await _pressCtrl.animateTo(
       0.0,
       duration: const Duration(milliseconds: 80),
       curve: Curves.easeOut,
     );
 
-    // Phase 2: trigger state change, then release (150ms)
     ref.read(feedNotifierProvider.notifier).toggleLike(widget.post);
     await _pressCtrl.animateTo(
       1.0,
@@ -89,9 +83,7 @@ class _LikeButtonState extends ConsumerState<LikeButton>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
-    final secondary = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
+    final cs = Theme.of(context).colorScheme;
     final isLiked = widget.post.isLikedByMe;
 
     return Semantics(
@@ -106,33 +98,28 @@ class _LikeButtonState extends ConsumerState<LikeButton>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Heart with burst overlay
               ScaleTransition(
                 scale: _scale,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Particle burst ring (visible only when progress > 0)
                     AnimatedBuilder(
                       animation: _burstAnim,
                       builder: (_, _) => _ParticleBurst(
                         progress: _burstAnim.value,
-                        color: primary,
+                        color: cs.primary,
                       ),
                     ),
-                    // Heart icon — AnimatedSwitcher handles the outline→filled swap
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 150),
                       switchInCurve: Curves.easeOut,
                       switchOutCurve: Curves.easeOut,
-                      transitionBuilder: (child, anim) => ScaleTransition(
-                        scale: anim,
-                        child: child,
-                      ),
+                      transitionBuilder: (child, anim) =>
+                          ScaleTransition(scale: anim, child: child),
                       child: Icon(
                         isLiked ? Icons.favorite : Icons.favorite_border_rounded,
                         key: ValueKey(isLiked),
-                        color: isLiked ? primary : secondary,
+                        color: isLiked ? cs.primary : cs.onSurfaceVariant,
                         size: 20,
                       ),
                     ),
@@ -140,7 +127,6 @@ class _LikeButtonState extends ConsumerState<LikeButton>
                 ),
               ),
               const SizedBox(width: 6),
-              // Count — slides in from bottom whenever value changes (phase 4)
               ClipRect(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
@@ -156,7 +142,7 @@ class _LikeButtonState extends ConsumerState<LikeButton>
                     '${widget.post.likesCount}',
                     key: ValueKey(widget.post.likesCount),
                     style: AppTextStyles.label.copyWith(
-                      color: isLiked ? primary : secondary,
+                      color: isLiked ? cs.primary : cs.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -182,9 +168,7 @@ class _ParticleBurst extends StatelessWidget {
       width: 36,
       height: 36,
       child: progress > 0
-          ? CustomPaint(
-              painter: _ParticlePainter(progress: progress, color: color),
-            )
+          ? CustomPaint(painter: _ParticlePainter(progress: progress, color: color))
           : null,
     );
   }

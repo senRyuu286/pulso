@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/pulso_theme_extension.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../../../../core/widgets/neumorphic_container.dart';
+import '../../../auth/data/providers/auth_providers.dart';
 import '../providers/feed_notifier.dart';
 import '../widgets/post_card.dart';
 
@@ -34,25 +35,24 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surface = isDark ? AppColors.surfaceD : AppColors.surfaceL;
-
     return Scaffold(
-      backgroundColor: surface,
       extendBody: true,
-      appBar: _PulsoAppBar(isDark: isDark),
+      appBar: const _PulsoAppBar(),
       body: const _FeedBody(),
       bottomNavigationBar: _NeumorphicNav(
         selectedIndex: _selectedTab,
         onTap: (i) {
           if (i == 2) {
-            // Create tab → push creation screen
             context.push(AppRoutes.createPost);
+            return;
+          }
+          if (i == 4) {
+            final userId = ref.read(authStateChangesProvider).asData?.value?.id;
+            if (userId != null) context.push(AppRoutes.profileFor(userId));
             return;
           }
           setState(() => _selectedTab = i);
         },
-        isDark: isDark,
       ),
     );
   }
@@ -61,21 +61,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 // ─── Top App Bar ─────────────────────────────────────────────────────────────
 
 class _PulsoAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _PulsoAppBar({required this.isDark});
-
-  final bool isDark;
+  const _PulsoAppBar();
 
   @override
   Size get preferredSize => const Size.fromHeight(64);
 
   @override
   Widget build(BuildContext context) {
-    final textPrimary = isDark ? AppColors.textPrimaryD : AppColors.textPrimaryL;
-    final textSecondary = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
-    final surface = isDark ? AppColors.surfaceD : AppColors.surfaceL;
+    final cs = Theme.of(context).colorScheme;
 
     return Container(
-      color: surface,
+      color: cs.surface,
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top,
         left: 20,
@@ -85,23 +81,37 @@ class _PulsoAppBar extends StatelessWidget implements PreferredSizeWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Pulso wordmark — Fraunces italic, display weight
           Text(
             'Pulso',
             style: GoogleFonts.fraunces(
               fontSize: 28,
               fontWeight: FontWeight.w700,
               fontStyle: FontStyle.italic,
-              color: textPrimary,
+              color: cs.onSurface,
               height: 1.0,
             ),
           ),
           const Spacer(),
-          Icon(
-            Icons.notifications_none_rounded,
-            size: 24,
-            color: textSecondary,
+          Consumer(
+            builder: (context, ref, _) {
+              final mode = ref.watch(themeProvider);
+              final isDark = mode == ThemeMode.dark;
+              return GestureDetector(
+                onTap: () => ref.read(themeProvider.notifier).toggle(),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                    key: ValueKey(isDark),
+                    size: 24,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              );
+            },
           ),
+          const SizedBox(width: 16),
+          Icon(Icons.notifications_none_rounded, size: 24, color: cs.onSurfaceVariant),
         ],
       ),
     );
@@ -116,7 +126,7 @@ class _FeedBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feedState = ref.watch(feedNotifierProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
 
     return switch (feedState) {
       FeedInitial() => const _LoadingView(),
@@ -124,17 +134,16 @@ class _FeedBody extends ConsumerWidget {
       FeedError(:final exception) => _ErrorView(
           message: exception.message,
           onRetry: () => ref.read(feedNotifierProvider.notifier).loadFeed(),
-          isDark: isDark,
         ),
-      FeedLoaded(:final posts) when posts.isEmpty => _EmptyView(isDark: isDark),
+      FeedLoaded(:final posts) when posts.isEmpty => const _EmptyView(),
       FeedLoaded(:final posts) => RefreshIndicator(
-          color: isDark ? AppColors.primaryD : AppColors.primaryL,
-          backgroundColor: isDark ? AppColors.surfaceRaisedD : AppColors.surfaceRaisedL,
+          color: cs.primary,
+          backgroundColor: cs.surfaceContainerHighest,
           onRefresh: () => ref.read(feedNotifierProvider.notifier).refresh(),
           child: ListView.builder(
             padding: EdgeInsets.only(
               top: 8,
-              bottom: MediaQuery.of(context).padding.bottom + 80, // nav bar height
+              bottom: MediaQuery.of(context).padding.bottom + 80,
             ),
             itemCount: posts.length,
             itemBuilder: (context, i) => PostCard(post: posts[i], index: i),
@@ -151,19 +160,16 @@ class _LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView.builder(
       padding: const EdgeInsets.only(top: 8, bottom: 80),
       itemCount: 4,
-      itemBuilder: (_, i) => _SkeletonCard(isDark: isDark),
+      itemBuilder: (_, i) => const _SkeletonCard(),
     );
   }
 }
 
 class _SkeletonCard extends StatefulWidget {
-  const _SkeletonCard({required this.isDark});
-
-  final bool isDark;
+  const _SkeletonCard();
 
   @override
   State<_SkeletonCard> createState() => _SkeletonCardState();
@@ -190,10 +196,10 @@ class _SkeletonCardState extends State<_SkeletonCard>
 
   @override
   Widget build(BuildContext context) {
-    final base = widget.isDark ? AppColors.surfaceRaisedD : AppColors.surfaceRaisedL;
-    final shimmer = widget.isDark
-        ? AppColors.primaryMutedD.withValues(alpha: 0.2)
-        : AppColors.primaryMutedL.withValues(alpha: 0.2);
+    final cs = Theme.of(context).colorScheme;
+    final pulso = context.pulso;
+    final base = cs.surfaceContainerHighest;
+    final shimmer = pulso.primaryMuted.withValues(alpha: 0.2);
 
     return AnimatedBuilder(
       animation: _ctrl,
@@ -250,9 +256,7 @@ class _SkeletonCardState extends State<_SkeletonCard>
 }
 
 class _EmptyView extends StatefulWidget {
-  const _EmptyView({required this.isDark});
-
-  final bool isDark;
+  const _EmptyView();
 
   @override
   State<_EmptyView> createState() => _EmptyViewState();
@@ -279,8 +283,8 @@ class _EmptyViewState extends State<_EmptyView>
 
   @override
   Widget build(BuildContext context) {
-    final primaryMuted = widget.isDark ? AppColors.primaryMutedD : AppColors.primaryMutedL;
-    final textSecondary = widget.isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
+    final cs = Theme.of(context).colorScheme;
+    final pulso = context.pulso;
 
     return Center(
       child: Column(
@@ -296,26 +300,19 @@ class _EmptyViewState extends State<_EmptyView>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [primaryMuted, primaryMuted.withValues(alpha: 0)],
+                    colors: [pulso.primaryMuted, pulso.primaryMuted.withValues(alpha: 0)],
                   ),
                 ),
-                child: Icon(
-                  Icons.photo_library_outlined,
-                  size: 36,
-                  color: primaryMuted,
-                ),
+                child: Icon(Icons.photo_library_outlined, size: 36, color: pulso.primaryMuted),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            'No posts yet.',
-            style: AppTextStyles.title.copyWith(color: textSecondary),
-          ),
+          Text('No posts yet.', style: AppTextStyles.title.copyWith(color: cs.onSurfaceVariant)),
           const SizedBox(height: 8),
           Text(
             'Be the first to share a moment.',
-            style: AppTextStyles.body.copyWith(color: textSecondary),
+            style: AppTextStyles.body.copyWith(color: cs.onSurfaceVariant),
           ),
         ],
       ),
@@ -324,20 +321,14 @@ class _EmptyViewState extends State<_EmptyView>
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({
-    required this.message,
-    required this.onRetry,
-    required this.isDark,
-  });
+  const _ErrorView({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final textSecondary = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
-    final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
+    final cs = Theme.of(context).colorScheme;
 
     return Center(
       child: Padding(
@@ -345,11 +336,11 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.wifi_off_rounded, size: 48, color: textSecondary),
+            Icon(Icons.wifi_off_rounded, size: 48, color: cs.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
               message,
-              style: AppTextStyles.body.copyWith(color: textSecondary),
+              style: AppTextStyles.body.copyWith(color: cs.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -357,7 +348,7 @@ class _ErrorView extends StatelessWidget {
               onPressed: onRetry,
               child: Text(
                 'Try again',
-                style: AppTextStyles.label.copyWith(color: primary),
+                style: AppTextStyles.label.copyWith(color: cs.primary),
               ),
             ),
           ],
@@ -368,43 +359,41 @@ class _ErrorView extends StatelessWidget {
 }
 
 // ─── Neumorphic Bottom Navigation Bar ────────────────────────────────────────
-// Design spec section 5.6: surface-raised, raised neumorphic, active dot in primary.
 
 class _NeumorphicNav extends StatelessWidget {
-  const _NeumorphicNav({
-    required this.selectedIndex,
-    required this.onTap,
-    required this.isDark,
-  });
+  const _NeumorphicNav({required this.selectedIndex, required this.onTap});
 
   final int selectedIndex;
   final ValueChanged<int> onTap;
-  final bool isDark;
 
   static const _icons = [
-    (outline: Icons.home_outlined,      filled: Icons.home_rounded),
-    (outline: Icons.search_rounded,     filled: Icons.search_rounded),
-    (outline: Icons.add_circle_outline, filled: Icons.add_circle_rounded),
-    (outline: Icons.notifications_none_rounded, filled: Icons.notifications_rounded),
-    (outline: Icons.person_outline_rounded,     filled: Icons.person_rounded),
+    (outline: Icons.home_outlined,               filled: Icons.home_rounded),
+    (outline: Icons.search_rounded,              filled: Icons.search_rounded),
+    (outline: Icons.add_circle_outline,          filled: Icons.add_circle_rounded),
+    (outline: Icons.notifications_none_rounded,  filled: Icons.notifications_rounded),
+    (outline: Icons.person_outline_rounded,      filled: Icons.person_rounded),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
-    final textSecondary = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
-    final bg = isDark ? AppColors.surfaceRaisedD : AppColors.surfaceRaisedL;
-    final blur = isDark ? 12.0 : 14.0;
+    final cs = Theme.of(context).colorScheme;
+    final pulso = context.pulso;
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return Container(
       decoration: BoxDecoration(
-        color: bg,
+        color: cs.surfaceContainerHighest,
         boxShadow: [
-          BoxShadow(color: shadowLight, offset: const Offset(-6, -6), blurRadius: blur),
-          BoxShadow(color: shadowDark,  offset: const Offset(6, 6),   blurRadius: blur),
+          BoxShadow(
+            color: pulso.shadowLight,
+            offset: const Offset(-6, -6),
+            blurRadius: pulso.shadowBlur,
+          ),
+          BoxShadow(
+            color: pulso.shadowDark,
+            offset: const Offset(6, 6),
+            blurRadius: pulso.shadowBlur,
+          ),
         ],
       ),
       padding: EdgeInsets.only(bottom: bottomPad, top: 8),
@@ -424,16 +413,15 @@ class _NeumorphicNav extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(icon, size: 24, color: isActive ? primary : textSecondary),
+                    Icon(icon, size: 24, color: isActive ? cs.primary : cs.onSurfaceVariant),
                     const SizedBox(height: 4),
-                    // Active indicator dot — 8dp in primary
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       width: isActive ? 8 : 0,
                       height: isActive ? 8 : 0,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isActive ? primary : Colors.transparent,
+                        color: isActive ? cs.primary : Colors.transparent,
                       ),
                     ),
                   ],

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
+import '../theme/pulso_theme_extension.dart';
 
 enum NeumorphicState { raised, flat, inset }
 
 /// Dual-shadow neumorphic surface — design spec section 4.
 ///
-/// Raised: light shadow top-left, dark shadow bottom-right (element pops out).
-/// Inset:  dark shadow top-left, light shadow bottom-right (element pressed in).
-/// Flat:   no shadow, same base background.
+/// All color and shadow values come from [ThemeData] / [PulsoThemeExtension]
+/// so dark-mode and future palette changes require zero widget-level changes.
+///
+/// Every variant wraps its output in [RepaintBoundary] so parent animations
+/// (route transitions, scrolling) reuse the cached GPU texture instead of
+/// re-executing [CustomPainter.paint] on every frame.
 class NeumorphicContainer extends StatelessWidget {
   const NeumorphicContainer({
     super.key,
@@ -30,63 +33,58 @@ class NeumorphicContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs    = Theme.of(context).colorScheme;
+    final pulso = context.pulso;
 
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
-    final blur = isDark ? 12.0 : 14.0;
+    final content = padding != null ? Padding(padding: padding!, child: child) : child;
 
-    final paddingWidget =
-        padding != null ? Padding(padding: padding!, child: child) : child;
+    final Widget surface;
 
     switch (state) {
       case NeumorphicState.raised:
-        final bg = isDark ? AppColors.surfaceRaisedD : AppColors.surfaceRaisedL;
-        return Container(
+        surface = Container(
           width: width,
           height: height,
           margin: margin,
           decoration: BoxDecoration(
-            color: bg,
+            color: cs.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(borderRadius),
             boxShadow: [
               BoxShadow(
-                color: shadowLight,
+                color: pulso.shadowLight,
                 offset: const Offset(-6, -6),
-                blurRadius: blur,
+                blurRadius: pulso.shadowBlur,
               ),
               BoxShadow(
-                color: shadowDark,
+                color: pulso.shadowDark,
                 offset: const Offset(6, 6),
-                blurRadius: blur,
+                blurRadius: pulso.shadowBlur,
               ),
             ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(borderRadius),
-            child: paddingWidget,
+            child: content,
           ),
         );
 
       case NeumorphicState.flat:
-        final bg = isDark ? AppColors.surfaceD : AppColors.surfaceL;
-        return Container(
+        surface = Container(
           width: width,
           height: height,
           margin: margin,
           decoration: BoxDecoration(
-            color: bg,
+            color: cs.surface,
             borderRadius: BorderRadius.circular(borderRadius),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(borderRadius),
-            child: paddingWidget,
+            child: content,
           ),
         );
 
       case NeumorphicState.inset:
-        final bg = isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL;
-        return SizedBox(
+        surface = SizedBox(
           width: width,
           height: height,
           child: Container(
@@ -95,26 +93,27 @@ class NeumorphicContainer extends StatelessWidget {
               borderRadius: BorderRadius.circular(borderRadius),
               child: CustomPaint(
                 painter: _InsetShadowPainter(
-                  backgroundColor: bg,
-                  lightColor: shadowLight,
-                  darkColor: shadowDark,
+                  backgroundColor: pulso.surfaceInset,
+                  lightColor: pulso.shadowLight,
+                  darkColor: pulso.shadowDark,
                   borderRadius: borderRadius,
-                  blur: blur,
+                  blur: pulso.shadowBlur,
                 ),
-                child: paddingWidget,
+                child: content,
               ),
             ),
           ),
         );
     }
+
+    return RepaintBoundary(child: surface);
   }
 }
 
-/// Paints inner neumorphic shadows using the "donut path" technique:
-/// a large outer rect minus a shifted inner rrect creates the edge shadow
-/// that, after clipping, looks like a shadow coming from inside the surface.
+/// Inner neumorphic shadow painter.
+/// Paths are cached per [Size] — rebuilt only on resize, not every frame.
 class _InsetShadowPainter extends CustomPainter {
-  const _InsetShadowPainter({
+  _InsetShadowPainter({
     required this.backgroundColor,
     required this.lightColor,
     required this.darkColor,
@@ -130,53 +129,58 @@ class _InsetShadowPainter extends CustomPainter {
 
   static const double _offset = 6.0;
 
+  Size? _cachedSize;
+  Path? _darkPath;
+  Path? _lightPath;
+
+  void _rebuildPaths(Size size) {
+    const pad = 600.0;
+    final huge = Rect.fromLTWH(-pad, -pad, size.width + pad * 2, size.height + pad * 2);
+    final r = Radius.circular(borderRadius);
+
+    _darkPath = Path()
+      ..addRect(huge)
+      ..addRRect(RRect.fromRectAndRadius(
+        (Offset.zero & size).shift(const Offset(_offset, _offset)),
+        r,
+      ))
+      ..fillType = PathFillType.evenOdd;
+
+    _lightPath = Path()
+      ..addRect(huge)
+      ..addRRect(RRect.fromRectAndRadius(
+        (Offset.zero & size).shift(const Offset(-_offset, -_offset)),
+        r,
+      ))
+      ..fillType = PathFillType.evenOdd;
+
+    _cachedSize = size;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final rrect = RRect.fromRectAndRadius(
       Offset.zero & size,
       Radius.circular(borderRadius),
     );
-
-    // Fill base background
     canvas.drawRRect(rrect, Paint()..color = backgroundColor);
 
+    if (_cachedSize != size) _rebuildPaths(size);
+
+    final sigma = blur / 2;
     canvas.save();
     canvas.clipRRect(rrect);
-
-    // Dark inner shadow from top-left (gives the "pressed in" feel)
-    _drawInnerShadow(canvas, size, darkColor, const Offset(_offset, _offset));
-    // Light inner highlight from bottom-right
-    _drawInnerShadow(canvas, size, lightColor, const Offset(-_offset, -_offset));
-
+    canvas.drawPath(_darkPath!,
+        Paint()..color = darkColor..maskFilter = MaskFilter.blur(BlurStyle.normal, sigma));
+    canvas.drawPath(_lightPath!,
+        Paint()..color = lightColor..maskFilter = MaskFilter.blur(BlurStyle.normal, sigma));
     canvas.restore();
-  }
-
-  void _drawInnerShadow(Canvas canvas, Size size, Color color, Offset dir) {
-    const padding = 600.0;
-    final huge = Rect.fromLTWH(-padding, -padding, size.width + padding * 2, size.height + padding * 2);
-    final shifted = RRect.fromRectAndRadius(
-      (Offset.zero & size).shift(dir),
-      Radius.circular(borderRadius),
-    );
-
-    // Donut: large rect minus the shifted inner rrect — only the edge inside
-    // the clip boundary is visible, creating the inner shadow ring.
-    final path = Path()
-      ..addRect(huge)
-      ..addRRect(shifted)
-      ..fillType = PathFillType.evenOdd;
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur / 2),
-    );
   }
 
   @override
   bool shouldRepaint(_InsetShadowPainter old) =>
       old.backgroundColor != backgroundColor ||
       old.lightColor != lightColor ||
-      old.darkColor != darkColor;
+      old.darkColor != darkColor ||
+      old.borderRadius != borderRadius;
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/pulso_theme_extension.dart';
 import '../providers/follow_notifier.dart';
 
 /// Follow / Unfollow button — design spec section 5.8.
@@ -38,7 +38,6 @@ class _FollowButtonState extends ConsumerState<FollowButton>
     );
     _morph = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
 
-    // Load follow state for this user
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(followNotifierProvider.notifier).load(widget.targetUserId);
     });
@@ -64,26 +63,20 @@ class _FollowButtonState extends ConsumerState<FollowButton>
   Widget build(BuildContext context) {
     final map = ref.watch(followNotifierProvider);
     final followState = map[widget.targetUserId] ?? const FollowChecking();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Keep animation in sync with state
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncAnimation(followState));
 
     return AnimatedBuilder(
       animation: _morph,
       builder: (context, _) {
-        final isFollowing =
-            followState is FollowLoaded && followState.isFollowing;
+        final isFollowing = followState is FollowLoaded && followState.isFollowing;
         return _FollowSurface(
           t: _morph.value,
-          isDark: isDark,
           isLoading: followState is FollowChecking,
           isFollowing: isFollowing,
           width: widget.width,
           onTap: followState is FollowLoaded
-              ? () => ref
-                  .read(followNotifierProvider.notifier)
-                  .toggle(widget.targetUserId)
+              ? () => ref.read(followNotifierProvider.notifier).toggle(widget.targetUserId)
               : null,
         );
       },
@@ -94,7 +87,6 @@ class _FollowButtonState extends ConsumerState<FollowButton>
 class _FollowSurface extends StatelessWidget {
   const _FollowSurface({
     required this.t,
-    required this.isDark,
     required this.isLoading,
     required this.isFollowing,
     required this.width,
@@ -102,7 +94,6 @@ class _FollowSurface extends StatelessWidget {
   });
 
   final double t; // 0 = raised/unfollowed, 1 = inset/following
-  final bool isDark;
   final bool isLoading;
   final bool isFollowing;
   final double width;
@@ -110,16 +101,11 @@ class _FollowSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
-    final textSecondary = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
-    final blur = isDark ? 12.0 : 14.0;
+    final cs = Theme.of(context).colorScheme;
+    final pulso = context.pulso;
 
-    final bgRaised = isDark ? AppColors.surfaceRaisedD : AppColors.surfaceRaisedL;
-    final bgInset = isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL;
-    final bg = Color.lerp(bgRaised, bgInset, t)!;
-    final labelColor = Color.lerp(primary, textSecondary, t)!;
+    final bg = Color.lerp(cs.surfaceContainerHighest, pulso.surfaceInset, t)!;
+    final labelColor = Color.lerp(cs.primary, cs.onSurfaceVariant, t)!;
 
     return GestureDetector(
       onTap: onTap,
@@ -130,9 +116,9 @@ class _FollowSurface extends StatelessWidget {
           painter: _MorphShadowPainter(
             t: t,
             bg: bg,
-            shadowLight: shadowLight,
-            shadowDark: shadowDark,
-            blur: blur,
+            shadowLight: pulso.shadowLight,
+            shadowDark: pulso.shadowDark,
+            blur: pulso.shadowBlur,
           ),
           child: SizedBox(
             width: width,
@@ -142,10 +128,7 @@ class _FollowSurface extends StatelessWidget {
                   ? SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: labelColor,
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: labelColor),
                     )
                   : AnimatedSwitcher(
                       duration: const Duration(milliseconds: 150),
@@ -180,7 +163,7 @@ class _MorphShadowPainter extends CustomPainter {
   final double blur;
 
   static const double _offset = 6.0;
-  static const double _radius = 12.0; // radius-sm
+  static const double _radius = 12.0;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -189,13 +172,11 @@ class _MorphShadowPainter extends CustomPainter {
       const Radius.circular(_radius),
     );
 
-    // Background fill (interpolated between raised and inset surface colors)
     canvas.drawRRect(rrect, Paint()..color = bg);
 
     final outsetOpacity = 1.0 - t;
-    final insetOpacity = t;
+    final insetOpacity  = t;
 
-    // Outset shadows (fade out when following)
     if (outsetOpacity > 0) {
       canvas.drawRRect(
         rrect.shift(const Offset(-_offset, -_offset)),
@@ -211,7 +192,6 @@ class _MorphShadowPainter extends CustomPainter {
       );
     }
 
-    // Inset shadows (fade in when following)
     if (insetOpacity > 0) {
       canvas.save();
       canvas.clipRRect(rrect);
