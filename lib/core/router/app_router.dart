@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/data/providers/auth_providers.dart';
-import '../../features/auth/presentation/providers/auth_notifier.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/feed/presentation/screens/post_creation_screen.dart';
+import '../../features/social/presentation/screens/profile_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -60,12 +60,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // ── Profile (placeholder — full implementation out of scope) ─────────
+      // ── Profile ───────────────────────────────────────────────────────────
       GoRoute(
         path: AppRoutes.profile,
         builder: (context, state) {
           final userId = state.pathParameters['userId'] ?? '';
-          return _ProfilePlaceholder(userId: userId);
+          return ProfileScreen(userId: userId);
         },
       ),
     ],
@@ -83,25 +83,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class _ProfilePlaceholder extends ConsumerWidget {
-  const _ProfilePlaceholder({required this.userId});
-
-  final String userId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
-            onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
-          ),
-        ],
-      ),
-      body: Center(child: Text('Profile: $userId')),
-    );
-  }
-}

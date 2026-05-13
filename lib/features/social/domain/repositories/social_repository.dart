@@ -1,3 +1,5 @@
+import '../models/user_profile.dart';
+
 abstract class SocialRepository {
   Future<void> follow({
     required String followerId,
@@ -17,4 +19,6 @@ abstract class SocialRepository {
   Future<int> followerCount(String userId);
 
   Future<int> followingCount(String userId);
+
+  Future<UserProfile> getUserProfile(String userId);
 }

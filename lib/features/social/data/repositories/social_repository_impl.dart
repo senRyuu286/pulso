@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
+import '../../domain/models/user_profile.dart';
 import '../../domain/repositories/social_repository.dart';
 
 class SocialRepositoryImpl implements SocialRepository {
@@ -86,6 +87,32 @@ class SocialRepositoryImpl implements SocialRepository {
       return (data as List).length;
     } catch (_) {
       return 0;
+    }
+  }
+
+  @override
+  Future<UserProfile> getUserProfile(String userId) async {
+    try {
+      final results = await Future.wait<dynamic>([
+        client.from('profiles').select('id, username, avatar_url').eq('id', userId).single(),
+        client.from('posts').select('id').eq('user_id', userId),
+        client.from('follows').select('follower_id').eq('following_id', userId),
+        client.from('follows').select('following_id').eq('follower_id', userId),
+      ]);
+
+      final profile = results[0] as Map<String, dynamic>;
+      return UserProfile(
+        id: profile['id'] as String,
+        username: profile['username'] as String,
+        avatarUrl: profile['avatar_url'] as String?,
+        postsCount: (results[1] as List).length,
+        followersCount: (results[2] as List).length,
+        followingCount: (results[3] as List).length,
+      );
+    } on SocketException {
+      rethrow;
+    } on TimeoutException {
+      rethrow;
     }
   }
 }

@@ -43,6 +43,37 @@ class FeedRepositoryImpl implements FeedRepository {
   }
 
   @override
+  Future<List<Post>> fetchUserPosts(String userId, {int page = 0, int pageSize = 30}) async {
+    try {
+      final currentUserId = client.auth.currentUser?.id ?? '';
+      final from = page * pageSize;
+      final to = from + pageSize - 1;
+
+      final data = await client
+          .from('posts')
+          .select('''
+            *,
+            likes(user_id),
+            author:profiles!posts_user_id_fkey(id, username, avatar_url)
+          ''')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .range(from, to);
+
+      return (data as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .map((row) => Post.fromMap(row, currentUserId: currentUserId))
+          .toList();
+    } on SocketException {
+      throw const NetworkFeedException();
+    } on TimeoutException {
+      throw const NetworkFeedException();
+    } catch (error) {
+      throw UnknownFeedException(_messageFromError(error));
+    }
+  }
+
+  @override
   Future<Post> createPost({
     required File image,
     required String? caption,
