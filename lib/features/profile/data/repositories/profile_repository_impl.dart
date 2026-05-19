@@ -38,27 +38,35 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<Profile> fetchProfile(String userId) async {
     try {
-      final data = await _client
+      final profileData = await _client
           .from('profiles')
-          .select(
-              '*, posts(count), follows!follows_following_id_fkey(count), follows!follows_follower_id_fkey(count)')
+          .select()
           .eq('id', userId)
-          .single();
+          .maybeSingle();
 
-      final postCount = _extractCount(data['posts']);
-      final followerCount = _extractCount(_pickCountSource(data, [
-        'follows!follows_following_id_fkey',
-        'follows_following_id_fkey',
-        'follows',
-      ]));
-      final followingCount = _extractCount(_pickCountSource(data, [
-        'follows!follows_follower_id_fkey',
-        'follows_follower_id_fkey',
-        'follows',
-      ]));
+      if (profileData == null) {
+        throw const ProfileNotFoundException();
+      }
+
+      final posts = await _client
+          .from('posts')
+          .select('id')
+          .eq('user_id', userId);
+      final followers = await _client
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', userId);
+      final following = await _client
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', userId);
+
+      final postCount = (posts as List).length;
+      final followerCount = (followers as List).length;
+      final followingCount = (following as List).length;
 
       return Profile.fromJson({
-        ...data,
+        ...profileData,
         'post_count': postCount,
         'follower_count': followerCount,
         'following_count': followingCount,
@@ -66,22 +74,6 @@ class ProfileRepositoryImpl implements ProfileRepository {
     } on PostgrestException catch (error) {
       if (_isNotFound(error)) {
         throw const ProfileNotFoundException();
-      }
-      if (_isRelationshipError(error)) {
-        final data = await _client
-            .from('profiles')
-            .select()
-            .eq('id', userId)
-            .maybeSingle();
-        if (data == null) {
-          throw const ProfileNotFoundException();
-        }
-        return Profile.fromJson({
-          ...data,
-          'post_count': 0,
-          'follower_count': 0,
-          'following_count': 0,
-        });
       }
       throw ProfileUpdateException(error.message);
     } on SocketException {
@@ -177,35 +169,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
     }
   }
 
-  int _extractCount(dynamic value) {
-    if (value is List && value.isNotEmpty) {
-      final first = value.first as Map<String, dynamic>;
-      final count = first['count'];
-      if (count is int) {
-        return count;
-      }
-    }
-    return 0;
-  }
-
-  dynamic _pickCountSource(
-    Map<String, dynamic> data,
-    List<String> keys,
-  ) {
-    for (final key in keys) {
-      if (data.containsKey(key)) {
-        return data[key];
-      }
-    }
-    return null;
-  }
 
   bool _isNotFound(PostgrestException error) {
     return error.code == 'PGRST116';
   }
 
-  bool _isRelationshipError(PostgrestException error) {
-    final message = error.message.toLowerCase();
-    return message.contains('relationship') || message.contains('foreign key');
-  }
 }
