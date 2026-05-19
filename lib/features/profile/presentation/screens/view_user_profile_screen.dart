@@ -16,7 +16,7 @@ final _userPostsProvider = FutureProvider.family<List<Post>, String>(
   (ref, userId) => ref.watch(feedRepositoryProvider).fetchUserPosts(userId),
 );
 
-class ViewUserProfileScreen extends ConsumerWidget {
+class ViewUserProfileScreen extends ConsumerStatefulWidget {
   const ViewUserProfileScreen({
     super.key,
     required this.userId,
@@ -25,7 +25,17 @@ class ViewUserProfileScreen extends ConsumerWidget {
   final String userId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ViewUserProfileScreen> createState() =>
+      _ViewUserProfileScreenState();
+}
+
+class _ViewUserProfileScreenState
+    extends ConsumerState<ViewUserProfileScreen> {
+  int? _followerCountOverride;
+  bool _requestedFollowLoad = false;
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         isDark ? AppColors.textPrimaryD : AppColors.textPrimaryL;
@@ -39,15 +49,53 @@ class ViewUserProfileScreen extends ConsumerWidget {
     final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
     final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
 
-    final profileAsync = ref.watch(fetchProfileProvider(userId));
-    final postsAsync = ref.watch(_userPostsProvider(userId));
+    final profileAsync = ref.watch(fetchProfileProvider(widget.userId));
+    final postsAsync = ref.watch(_userPostsProvider(widget.userId));
     final currentUserId =
         ref.read(supabaseClientProvider).auth.currentUser?.id;
     final followMap = ref.watch(followNotifierProvider);
-    final followState = followMap[userId] ?? const FollowChecking();
+    final followState = followMap[widget.userId] ?? const FollowChecking();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(followNotifierProvider.notifier).load(userId);
+    if (!_requestedFollowLoad) {
+      _requestedFollowLoad = true;
+      Future.microtask(() {
+        if (!mounted) {
+          return;
+        }
+        ref.read(followNotifierProvider.notifier).load(widget.userId);
+      });
+    }
+
+    ref.listen<AsyncValue<Profile>>(fetchProfileProvider(widget.userId),
+        (previous, next) {
+      if (next is AsyncData<Profile>) {
+        final nextCount = next.value.followerCount;
+        if (_followerCountOverride != nextCount) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _followerCountOverride = nextCount;
+          });
+        }
+      }
+    });
+
+    ref.listen<FollowMap>(followNotifierProvider, (previous, next) {
+      final prevState = previous?[widget.userId];
+      final nextState = next[widget.userId];
+      if (prevState is FollowLoaded && nextState is FollowLoaded) {
+        if (prevState.isFollowing != nextState.isFollowing) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _followerCountOverride =
+                (_followerCountOverride ?? 0) +
+                (nextState.isFollowing ? 1 : -1);
+          });
+        }
+      }
     });
 
     return Scaffold(
@@ -65,7 +113,8 @@ class ViewUserProfileScreen extends ConsumerWidget {
                   style: AppTextStyles.body.copyWith(color: primary),
                 ),
                 TextButton(
-                  onPressed: () => ref.refresh(fetchProfileProvider(userId)),
+                  onPressed: () =>
+                      ref.refresh(fetchProfileProvider(widget.userId)),
                   child: Text(
                     'Retry',
                     style: AppTextStyles.label.copyWith(color: primary),
@@ -75,6 +124,10 @@ class ViewUserProfileScreen extends ConsumerWidget {
             ),
           ),
           data: (profile) {
+            final displayedProfile = profile.copyWith(
+              followerCount:
+                  _followerCountOverride ?? profile.followerCount,
+            );
             return CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
@@ -126,7 +179,7 @@ class ViewUserProfileScreen extends ConsumerWidget {
                           ),
                         const SizedBox(height: 24),
                         _StatsRow(
-                          profile: profile,
+                          profile: displayedProfile,
                           surfaceInset: surfaceInset,
                           textPrimary: textPrimary,
                           textSecondary: textSecondary,
@@ -134,7 +187,7 @@ class ViewUserProfileScreen extends ConsumerWidget {
                           shadowDark: shadowDark,
                         ),
                         const SizedBox(height: 20),
-                        if (currentUserId != userId)
+                        if (currentUserId != widget.userId)
                           _FollowButton(
                             followState: followState,
                             surfaceRaised: surfaceRaised,
@@ -146,7 +199,7 @@ class ViewUserProfileScreen extends ConsumerWidget {
                             onTap: followState is FollowLoaded
                                 ? () => ref
                                     .read(followNotifierProvider.notifier)
-                                    .toggle(userId)
+                                    .toggle(widget.userId)
                                 : null,
                           ),
                         const SizedBox(height: 12),
