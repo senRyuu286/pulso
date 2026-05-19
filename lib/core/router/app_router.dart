@@ -7,7 +7,10 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/feed/presentation/screens/post_creation_screen.dart';
-import '../../features/social/presentation/screens/profile_screen.dart';
+import '../../features/profile/domain/models/profile.dart';
+import '../../features/profile/presentation/screens/edit_profile_screen.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/view_user_profile_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -63,10 +66,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ── Profile ───────────────────────────────────────────────────────────
       GoRoute(
         path: AppRoutes.profile,
-        builder: (context, state) {
-          final userId = state.pathParameters['userId'] ?? '';
-          return ProfileScreen(userId: userId);
-        },
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.editProfile,
+        builder: (context, state) =>
+            EditProfileScreen(initialProfile: state.extra as Profile),
+      ),
+      GoRoute(
+        path: AppRoutes.userProfile,
+        builder: (context, state) => ViewUserProfileScreen(
+          userId: state.pathParameters['userId']!,
+        ),
       ),
     ],
     redirect: (context, state) {
