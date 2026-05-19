@@ -7,6 +7,7 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../auth/data/providers/auth_providers.dart';
+import '../../../auth/presentation/providers/auth_notifier.dart';
 import '../../../feed/data/providers/feed_providers.dart';
 import '../../../feed/domain/models/post.dart';
 import '../../domain/models/profile.dart';
@@ -118,6 +119,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               onEditAvatar: currentUserId == null
                   ? null
                   : () => _pickAndUploadAvatar(context, currentUserId),
+              onSignOut: () =>
+                  ref.read(authNotifierProvider.notifier).signOut(),
             ),
           ),
           _PostsSliver(
@@ -296,6 +299,7 @@ class _ProfileBody extends StatelessWidget {
     required this.shadowDark,
     required this.primary,
     required this.onEditAvatar,
+    required this.onSignOut,
   });
 
   final Profile profile;
@@ -308,6 +312,7 @@ class _ProfileBody extends StatelessWidget {
   final Color shadowDark;
   final Color primary;
   final VoidCallback? onEditAvatar;
+  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -382,6 +387,34 @@ class _ProfileBody extends StatelessWidget {
               child: Text(
                 'Edit Profile',
                 style: AppTextStyles.title.copyWith(color: primary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: onSignOut,
+            child: Container(
+              height: 52,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: surfaceInset,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: shadowLight,
+                    blurRadius: 14,
+                    offset: const Offset(-6, -6),
+                  ),
+                  BoxShadow(
+                    color: shadowDark,
+                    blurRadius: 14,
+                    offset: const Offset(6, 6),
+                  ),
+                ],
+              ),
+              child: Text(
+                'Sign Out',
+                style: AppTextStyles.title.copyWith(color: textSecondary),
               ),
             ),
           ),

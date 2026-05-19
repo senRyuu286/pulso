@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
@@ -80,11 +81,10 @@ class FeedRepositoryImpl implements FeedRepository {
     required String userId,
   }) async {
     try {
-      // Use millisecond timestamp as unique filename — no UUID package needed
-      final filename = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final filename = '${_generateUuidV4()}.jpg';
       final storagePath = '$userId/$filename';
 
-      await client.storage.from('post-images').upload(
+      await client.storage.from('posts').upload(
             storagePath,
             image,
             fileOptions: const supabase.FileOptions(
@@ -93,8 +93,8 @@ class FeedRepositoryImpl implements FeedRepository {
             ),
           );
 
-      final imageUrl =
-          client.storage.from('post-images').getPublicUrl(storagePath);
+      // Public bucket: URLs are publicly readable.
+      final imageUrl = client.storage.from('posts').getPublicUrl(storagePath);
 
       final data = await client
           .from('posts')
@@ -153,5 +153,16 @@ class FeedRepositoryImpl implements FeedRepository {
   String _messageFromError(Object error) {
     final text = error.toString();
     return text.isEmpty ? 'Something went wrong.' : text;
+  }
+
+  String _generateUuidV4() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0F) | 0x40;
+    bytes[8] = (bytes[8] & 0x3F) | 0x80;
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+        '${hex.substring(12, 16)}-${hex.substring(16, 20)}-'
+        '${hex.substring(20, 32)}';
   }
 }

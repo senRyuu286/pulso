@@ -77,27 +77,27 @@ CREATE POLICY "follows_delete" ON public.follows
 -- ─── Storage Bucket ───────────────────────────────────────────────────────────
 
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('post-images', 'post-images', true)
+VALUES ('posts', 'posts', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Public read: anyone can view post images
-CREATE POLICY "post_images_public_read"
+CREATE POLICY "posts_public_read"
   ON storage.objects FOR SELECT
-  USING (bucket_id = 'post-images');
+  USING (bucket_id = 'posts');
 
 -- Authenticated write: path must start with the user's own UID
-CREATE POLICY "post_images_auth_insert"
+CREATE POLICY "posts_auth_insert"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (
-    bucket_id = 'post-images'
+    bucket_id = 'posts'
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
 -- Owner delete: can only delete their own images
-CREATE POLICY "post_images_owner_delete"
+CREATE POLICY "posts_owner_delete"
   ON storage.objects FOR DELETE TO authenticated
   USING (
-    bucket_id = 'post-images'
+    bucket_id = 'posts'
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
 

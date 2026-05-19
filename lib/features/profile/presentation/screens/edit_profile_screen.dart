@@ -29,7 +29,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void initState() {
     super.initState();
     usernameController =
-        TextEditingController(text: widget.initialProfile.username);
+      TextEditingController(text: '@${widget.initialProfile.username}');
     displayNameController =
       TextEditingController(text: widget.initialProfile.displayName ?? '');
     bioController = TextEditingController(text: widget.initialProfile.bio ?? '');
@@ -214,14 +214,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final trimmedBio = bioController.text.trim();
     final initialDisplayName = widget.initialProfile.displayName ?? '';
     final initialBio = widget.initialProfile.bio ?? '';
-    return trimmedDisplayName.isNotEmpty &&
-      (trimmedDisplayName != initialDisplayName || trimmedBio != initialBio);
+    return trimmedDisplayName != initialDisplayName || trimmedBio != initialBio;
   }
 
   void _handleSave(String userId) {
+    final displayName = displayNameController.text.trim();
     ref.read(profileProvider.notifier).updateProfile(
           userId: userId,
-          displayName: displayNameController.text.trim(),
+          displayName: displayName.isEmpty ? null : displayName,
           bio: bioController.text.trim(),
         );
   }

@@ -41,13 +41,19 @@ class AuthNotifier extends Notifier<AuthState> {
 
   AuthRepository get _repository => ref.read(authRepositoryProvider);
 
-  Future<void> signUp(String email, String password, String username) async {
+  Future<void> signUp(
+    String email,
+    String password,
+    String username,
+    String displayName,
+  ) async {
     state = const AuthLoading();
     try {
       final user = await _repository.signUp(
         email: email,
         password: password,
         username: username,
+        displayName: displayName,
       );
       state = AuthSuccess(user);
     } on AuthException catch (exception) {

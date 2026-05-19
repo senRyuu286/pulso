@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -119,18 +120,18 @@ class ProfileRepositoryImpl implements ProfileRepository {
     required String fileExtension,
   }) async {
     try {
-      final filePath =
-          '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+      final filePath = '$userId/${_generateUuidV4()}.jpg';
 
       await _client.storage.from('avatars').uploadBinary(
             filePath,
             imageBytes,
             fileOptions: FileOptions(
               upsert: true,
-              contentType: 'image/$fileExtension',
+              contentType: 'image/jpeg',
             ),
           );
 
+      // Public bucket: URLs are publicly readable.
       final publicUrl = _client.storage.from('avatars').getPublicUrl(filePath);
 
       await _client
@@ -171,6 +172,17 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   bool _isNotFound(PostgrestException error) {
     return error.code == 'PGRST116';
+  }
+
+  String _generateUuidV4() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0F) | 0x40;
+    bytes[8] = (bytes[8] & 0x3F) | 0x80;
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+        '${hex.substring(12, 16)}-${hex.substring(16, 20)}-'
+        '${hex.substring(20, 32)}';
   }
 
 }

@@ -17,18 +17,21 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final TextEditingController usernameController = TextEditingController();
+  final TextEditingController displayNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
 
   String? usernameError;
+  String? displayNameError;
   String? emailError;
   String? passwordError;
   String? confirmError;
 
   bool get _isFormValid {
     return usernameController.text.trim().length >= 3 &&
+      displayNameController.text.trim().isNotEmpty &&
       _isValidEmail(emailController.text) &&
         passwordController.text.length >= 6 &&
         confirmPasswordController.text == passwordController.text;
@@ -36,6 +39,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   bool get _isUsernameValid {
     return usernameController.text.trim().length >= 3;
+  }
+
+  bool get _isDisplayNameValid {
+    return displayNameController.text.trim().isNotEmpty;
   }
 
   bool get _isEmailValid {
@@ -67,6 +74,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         usernameError = null;
       });
     });
+    displayNameController.addListener(() {
+      setState(() {
+        displayNameError = null;
+      });
+    });
     emailController.addListener(() {
       setState(() {
         emailError = null;
@@ -96,6 +108,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   void dispose() {
     usernameController.dispose();
+    displayNameController.dispose();
     emailController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
@@ -110,6 +123,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         usernameError = 'Username must be at least 3 characters';
       } else {
         usernameError = null;
+      }
+
+      if (displayNameController.text.trim().isEmpty) {
+        displayNameError = 'Display name is required';
+      } else {
+        displayNameError = null;
       }
 
       if (emailController.text.trim().isEmpty) {
@@ -140,17 +159,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _handleSignUp() {
     final isUsernameValid = _isUsernameValid;
+    final isDisplayNameValid = _isDisplayNameValid;
     final isEmailValid = _isEmailValid;
     final isPasswordValid = _isPasswordValid;
     final isConfirmValid = _isConfirmValid;
 
     if (!isUsernameValid ||
+      !isDisplayNameValid ||
         !isEmailValid ||
         !isPasswordValid ||
         !isConfirmValid) {
       setState(() {
         usernameError =
             isUsernameValid ? null : 'Username must be at least 3 characters.';
+      displayNameError =
+        isDisplayNameValid ? null : 'Display name is required.';
         emailError = isEmailValid ? null : 'Enter a valid email address.';
         passwordError =
             isPasswordValid ? null : 'Password must be at least 6 characters.';
@@ -163,6 +186,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           emailController.text.trim(),
           passwordController.text,
           usernameController.text.trim(),
+          displayNameController.text.trim(),
         );
   }
 
@@ -250,6 +274,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     errorText: null,
                   ),
                   _buildFieldError(usernameError, primary),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Display name',
+                    style: AppTextStyles.label.copyWith(
+                      color: textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  AuthTextField(
+                    controller: displayNameController,
+                    hintText: 'Your name',
+                    errorText: null,
+                  ),
+                  _buildFieldError(displayNameError, primary),
                   const SizedBox(height: 14),
                   Text(
                     'Your email address',

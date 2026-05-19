@@ -16,6 +16,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
     required String username,
+    required String displayName,
   }) async {
     try {
       final response = await client.auth.signUp(
@@ -30,6 +31,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await client.from('profiles').insert({
         'id': user.id,
         'username': username,
+        'display_name': displayName,
         'created_at': DateTime.now().toIso8601String(),
       });
 
