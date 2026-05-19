@@ -88,16 +88,15 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<Profile> updateProfile({
     required String userId,
-    String? username,
+    String? displayName,
     String? bio,
   }) async {
     try {
       final data = await _client
           .from('profiles')
           .update({
-            'username': username,
+            'display_name': displayName,
             'bio': bio,
-            'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', userId)
           .select()

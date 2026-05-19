@@ -2,6 +2,7 @@ class Profile {
   const Profile({
     required this.id,
     required this.username,
+    required this.displayName,
     required this.bio,
     required this.avatarUrl,
     required this.postCount,
@@ -12,6 +13,7 @@ class Profile {
 
   final String id;
   final String username;
+  final String? displayName;
   final String? bio;
   final String? avatarUrl;
   final int postCount;
@@ -22,6 +24,7 @@ class Profile {
   Profile copyWith({
     String? id,
     String? username,
+    String? displayName,
     String? bio,
     String? avatarUrl,
     int? postCount,
@@ -32,6 +35,7 @@ class Profile {
     return Profile(
       id: id ?? this.id,
       username: username ?? this.username,
+      displayName: displayName ?? this.displayName,
       bio: bio ?? this.bio,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       postCount: postCount ?? this.postCount,
@@ -45,6 +49,7 @@ class Profile {
     return Profile(
       id: json['id'] as String,
       username: (json['username'] as String?) ?? '',
+      displayName: json['display_name'] as String?,
       bio: json['bio'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       postCount: (json['postCount'] as int?) ?? (json['post_count'] as int?) ?? 0,
@@ -60,6 +65,7 @@ class Profile {
     return {
       'id': id,
       'username': username,
+      'display_name': displayName,
       'bio': bio,
       'avatar_url': avatarUrl,
       'post_count': postCount,
@@ -77,6 +83,7 @@ class Profile {
     return other is Profile &&
         other.id == id &&
         other.username == username &&
+      other.displayName == displayName &&
         other.bio == bio &&
         other.avatarUrl == avatarUrl &&
         other.postCount == postCount &&
@@ -89,6 +96,7 @@ class Profile {
   int get hashCode => Object.hash(
         id,
         username,
+      displayName,
         bio,
         avatarUrl,
         postCount,

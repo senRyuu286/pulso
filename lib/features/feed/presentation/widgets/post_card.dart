@@ -127,7 +127,7 @@ class _CardHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    post.username ?? 'User',
+                    '@${post.username ?? 'user'}',
                     style: AppTextStyles.label.copyWith(color: cs.onSurface),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

@@ -7,7 +7,7 @@ abstract class ProfileRepository {
 
   Future<Profile> updateProfile({
     required String userId,
-    String? username,
+    String? displayName,
     String? bio,
   });
 

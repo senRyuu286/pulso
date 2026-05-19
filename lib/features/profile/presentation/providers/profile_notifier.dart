@@ -58,7 +58,7 @@ class ProfileNotifier extends _$ProfileNotifier {
 
   Future<void> updateProfile({
     required String userId,
-    String? username,
+    String? displayName,
     String? bio,
   }) async {
     final currentProfile = _currentProfile();
@@ -68,10 +68,12 @@ class ProfileNotifier extends _$ProfileNotifier {
       state = const ProfileLoading();
     }
     try {
-      final profile = await ref
+      await ref
           .read(profileRepositoryProvider)
-          .updateProfile(userId: userId, username: username, bio: bio);
-      state = ProfileLoaded(profile);
+          .updateProfile(userId: userId, displayName: displayName, bio: bio);
+      final refreshed =
+          await ref.read(profileRepositoryProvider).fetchProfile(userId);
+      state = ProfileLoaded(refreshed);
     } catch (error) {
       state = ProfileError(_messageFromError(error), currentProfile);
     }

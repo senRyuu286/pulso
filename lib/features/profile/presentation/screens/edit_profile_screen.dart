@@ -22,6 +22,7 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController usernameController;
+  late final TextEditingController displayNameController;
   late final TextEditingController bioController;
 
   @override
@@ -29,6 +30,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.initState();
     usernameController =
         TextEditingController(text: widget.initialProfile.username);
+    displayNameController =
+      TextEditingController(text: widget.initialProfile.displayName ?? '');
     bioController = TextEditingController(text: widget.initialProfile.bio ?? '');
     bioController.addListener(() {
       setState(() {});
@@ -38,6 +41,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   void dispose() {
     usernameController.dispose();
+    displayNameController.dispose();
     bioController.dispose();
     super.dispose();
   }
@@ -104,6 +108,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               _ProfileTextField(
                 controller: usernameController,
                 hintText: '@username',
+                textColor: textPrimary,
+                placeholderColor: textPlaceholder,
+                shadowLight: shadowLight,
+                shadowDark: shadowDark,
+                isDark: isDark,
+                readOnly: true,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Display Name',
+                style: AppTextStyles.label.copyWith(color: textSecondary),
+              ),
+              const SizedBox(height: 8),
+              _ProfileTextField(
+                controller: displayNameController,
+                hintText: 'Your name',
                 textColor: textPrimary,
                 placeholderColor: textPlaceholder,
                 shadowLight: shadowLight,
@@ -190,18 +210,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   bool _isSaveEnabled() {
-    final trimmedUsername = usernameController.text.trim();
+    final trimmedDisplayName = displayNameController.text.trim();
     final trimmedBio = bioController.text.trim();
+    final initialDisplayName = widget.initialProfile.displayName ?? '';
     final initialBio = widget.initialProfile.bio ?? '';
-    return trimmedUsername.isNotEmpty &&
-        (trimmedUsername != widget.initialProfile.username ||
-            trimmedBio != initialBio);
+    return trimmedDisplayName.isNotEmpty &&
+      (trimmedDisplayName != initialDisplayName || trimmedBio != initialBio);
   }
 
   void _handleSave(String userId) {
     ref.read(profileProvider.notifier).updateProfile(
           userId: userId,
-          username: usernameController.text.trim(),
+          displayName: displayNameController.text.trim(),
           bio: bioController.text.trim(),
         );
   }
@@ -216,6 +236,7 @@ class _ProfileTextField extends StatelessWidget {
     required this.shadowLight,
     required this.shadowDark,
     required this.isDark,
+    this.readOnly = false,
     this.maxLines = 1,
   });
 
@@ -226,6 +247,7 @@ class _ProfileTextField extends StatelessWidget {
   final Color shadowLight;
   final Color shadowDark;
   final bool isDark;
+  final bool readOnly;
   final int maxLines;
 
   @override
@@ -252,6 +274,7 @@ class _ProfileTextField extends StatelessWidget {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        readOnly: readOnly,
         style: AppTextStyles.body.copyWith(color: textColor),
         decoration: InputDecoration(
           hintText: hintText,

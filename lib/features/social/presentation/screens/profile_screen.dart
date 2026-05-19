@@ -170,7 +170,7 @@ class _ProfileHeader extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            profile.username,
+            '@${profile.username}',
             style: AppTextStyles.label.copyWith(color: cs.onSurface),
           ),
           const SizedBox(height: 16),

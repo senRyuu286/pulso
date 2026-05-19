@@ -95,7 +95,7 @@ class ViewUserProfileScreen extends ConsumerWidget {
                               ),
                             ),
                             Text(
-                              profile.username,
+                              '@${profile.username}',
                               style:
                                   AppTextStyles.title.copyWith(color: textPrimary),
                             ),
@@ -110,7 +110,7 @@ class ViewUserProfileScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          profile.username,
+                          '@${profile.username}',
                           style: AppTextStyles.headline
                               .copyWith(color: textPrimary),
                           textAlign: TextAlign.center,

@@ -329,8 +329,14 @@ class _ProfileBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          if (profile.displayName != null && profile.displayName!.isNotEmpty)
+            Text(
+              profile.displayName!,
+              style: AppTextStyles.title.copyWith(color: textPrimary),
+              textAlign: TextAlign.center,
+            ),
           Text(
-            profile.username,
+            '@${profile.username}',
             style: AppTextStyles.headline.copyWith(color: textPrimary),
             textAlign: TextAlign.center,
           ),
