@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../auth/data/providers/auth_providers.dart';
 import '../../../feed/data/providers/feed_providers.dart';
 import '../../../feed/domain/models/post.dart';
 import '../../data/providers/profile_providers.dart';
 import '../../domain/models/profile.dart';
+import '../../../social/presentation/providers/follow_notifier.dart';
 import '../widgets/profile_avatar.dart';
 
 final _userPostsProvider = FutureProvider.family<List<Post>, String>(
@@ -39,6 +41,14 @@ class ViewUserProfileScreen extends ConsumerWidget {
 
     final profileAsync = ref.watch(fetchProfileProvider(userId));
     final postsAsync = ref.watch(_userPostsProvider(userId));
+    final currentUserId =
+        ref.read(supabaseClientProvider).auth.currentUser?.id;
+    final followMap = ref.watch(followNotifierProvider);
+    final followState = followMap[userId] ?? const FollowChecking();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(followNotifierProvider.notifier).load(userId);
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -124,31 +134,21 @@ class ViewUserProfileScreen extends ConsumerWidget {
                           shadowDark: shadowDark,
                         ),
                         const SizedBox(height: 20),
-                        Container(
-                          height: 52,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: surfaceRaised,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: shadowLight,
-                                blurRadius: 14,
-                                offset: const Offset(-6, -6),
-                              ),
-                              BoxShadow(
-                                color: shadowDark,
-                                blurRadius: 14,
-                                offset: const Offset(6, 6),
-                              ),
-                            ],
+                        if (currentUserId != userId)
+                          _FollowButton(
+                            followState: followState,
+                            surfaceRaised: surfaceRaised,
+                            surfaceInset: surfaceInset,
+                            shadowLight: shadowLight,
+                            shadowDark: shadowDark,
+                            textSecondary: textSecondary,
+                            primary: primary,
+                            onTap: followState is FollowLoaded
+                                ? () => ref
+                                    .read(followNotifierProvider.notifier)
+                                    .toggle(userId)
+                                : null,
                           ),
-                          child: Text(
-                            'Follow',
-                            style: AppTextStyles.title.copyWith(color: primary),
-                          ),
-                        ),
-                        // TODO: Implement follow/unfollow.
                         const SizedBox(height: 12),
                       ],
                     ),
@@ -234,6 +234,75 @@ class _PostsSliver extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _FollowButton extends StatelessWidget {
+  const _FollowButton({
+    required this.followState,
+    required this.surfaceRaised,
+    required this.surfaceInset,
+    required this.shadowLight,
+    required this.shadowDark,
+    required this.textSecondary,
+    required this.primary,
+    required this.onTap,
+  });
+
+  final FollowState followState;
+  final Color surfaceRaised;
+  final Color surfaceInset;
+  final Color shadowLight;
+  final Color shadowDark;
+  final Color textSecondary;
+  final Color primary;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = followState;
+    final isFollowing =
+      state is FollowLoaded ? state.isFollowing : false;
+    final isLoading = followState is FollowChecking;
+    final background = isFollowing ? surfaceInset : surfaceRaised;
+    final labelColor = isFollowing ? textSecondary : primary;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 52,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: shadowLight,
+              blurRadius: 14,
+              offset: const Offset(-6, -6),
+            ),
+            BoxShadow(
+              color: shadowDark,
+              blurRadius: 14,
+              offset: const Offset(6, 6),
+            ),
+          ],
+        ),
+        child: isLoading
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: primary,
+                ),
+              )
+            : Text(
+                isFollowing ? 'Following' : 'Follow',
+                style: AppTextStyles.title.copyWith(color: labelColor),
+              ),
+      ),
     );
   }
 }
