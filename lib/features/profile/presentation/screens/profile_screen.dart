@@ -3,14 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../auth/data/providers/auth_providers.dart';
-import '../../../auth/domain/models/auth_user.dart';
+import '../../../feed/data/providers/feed_providers.dart';
+import '../../../feed/domain/models/post.dart';
 import '../../domain/models/profile.dart';
 import '../providers/profile_notifier.dart';
 import '../widgets/avatar_crop_preview.dart';
 import '../widgets/profile_avatar.dart';
+
+final _userPostsProvider = FutureProvider.family<List<Post>, String>(
+  (ref, userId) => ref.watch(feedRepositoryProvider).fetchUserPosts(userId),
+);
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -20,17 +26,8 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  @override
-  void initState() {
-    super.initState();
-    ref.listen<AsyncValue<AuthUser?>>(authStateChangesProvider,
-        (previous, next) {
-      final user = next.asData?.value;
-      if (user != null) {
-        ref.read(profileProvider.notifier).loadProfile(user.id);
-      }
-    });
-  }
+  bool _requestedLoad = false;
+  String? _lastUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -52,8 +49,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     final currentUserId = authState.asData?.value?.id;
 
+    if (currentUserId != null && _lastUserId != currentUserId) {
+      _lastUserId = currentUserId;
+      _requestedLoad = false;
+    }
+
+    if (currentUserId != null && !_requestedLoad) {
+      _requestedLoad = true;
+      Future.microtask(() {
+        if (!mounted) {
+          return;
+        }
+        ref.read(profileProvider.notifier).loadProfile(currentUserId);
+      });
+    }
+
     Widget body;
-    if (profileState is ProfileLoading) {
+    if (profileState is ProfileLoading || profileState is ProfileInitial) {
       body = Center(
         child: CircularProgressIndicator(color: primary),
       );
@@ -88,37 +100,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ? profileState.profile
           : (profileState as ProfileUpdating).profile;
 
-      body = _ProfileBody(
-        profile: profile,
-        isDark: isDark,
-        textPrimary: textPrimary,
-        textSecondary: textSecondary,
-        surfaceInset: surfaceInset,
-        surfaceRaised: surfaceRaised,
-        shadowLight: shadowLight,
-        shadowDark: shadowDark,
-        primary: primary,
-        onEditAvatar: currentUserId == null
-            ? null
-            : () => _pickAndUploadAvatar(context, currentUserId),
+      final postsAsync = ref.watch(_userPostsProvider(profile.id));
+
+      body = CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _ProfileBody(
+              profile: profile,
+              isDark: isDark,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              surfaceInset: surfaceInset,
+              surfaceRaised: surfaceRaised,
+              shadowLight: shadowLight,
+              shadowDark: shadowDark,
+              primary: primary,
+              onEditAvatar: currentUserId == null
+                  ? null
+                  : () => _pickAndUploadAvatar(context, currentUserId),
+            ),
+          ),
+          _PostsSliver(
+            postsAsync: postsAsync,
+            textSecondary: textSecondary,
+            primary: primary,
+            isDark: isDark,
+          ),
+        ],
       );
     } else {
       body = const SizedBox.shrink();
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.9,
-                child: body,
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: SafeArea(child: body),
     );
   }
 
@@ -132,14 +147,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
     final bytes = await xFile.readAsBytes();
-    if (!mounted) {
+    if (!context.mounted) {
       return;
     }
-
-    final sheetBg = (Theme.of(context).brightness == Brightness.dark
+    final theme = Theme.of(context);
+    final sheetBg = (theme.brightness == Brightness.dark
             ? AppColors.surfaceD
             : AppColors.surfaceL)
-        .withOpacity(0);
+        .withValues(alpha: 0);
+    if (!context.mounted) {
+      return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -161,6 +179,107 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           },
         );
       },
+    );
+  }
+}
+
+class _PostsSliver extends StatelessWidget {
+  const _PostsSliver({
+    required this.postsAsync,
+    required this.textSecondary,
+    required this.primary,
+    required this.isDark,
+  });
+
+  final AsyncValue<List<Post>> postsAsync;
+  final Color textSecondary;
+  final Color primary;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return postsAsync.when(
+      loading: () => SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: CircularProgressIndicator(color: primary),
+          ),
+        ),
+      ),
+      error: (error, stack) => SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Text(
+            'Unable to load posts.',
+            style: AppTextStyles.body.copyWith(color: primary),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+      data: (posts) {
+        if (posts.isEmpty) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+              child: Text(
+                'No posts yet.',
+                style: AppTextStyles.body.copyWith(color: textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+        return SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          sliver: SliverGrid(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => _PostGridTile(
+                post: posts[index],
+                isDark: isDark,
+              ),
+              childCount: posts.length,
+            ),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PostGridTile extends StatelessWidget {
+  const _PostGridTile({
+    required this.post,
+    required this.isDark,
+  });
+
+  final Post post;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final surfaceInset =
+        isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL;
+    final textSecondary =
+        isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        color: surfaceInset,
+        child: Image.network(
+          post.imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Center(
+            child: Icon(Icons.broken_image_rounded, color: textSecondary),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -234,7 +353,7 @@ class _ProfileBody extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           GestureDetector(
-            onTap: () => context.push('/profile/edit', extra: profile),
+            onTap: () => context.push(AppRoutes.editProfile, extra: profile),
             child: Container(
               height: 52,
               alignment: Alignment.center,

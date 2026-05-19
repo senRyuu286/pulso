@@ -29,6 +29,8 @@ class _AvatarCropPreviewState extends State<AvatarCropPreview> {
     final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
     final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
     final dividerColor = isDark ? AppColors.dividerD : AppColors.dividerL;
+    final bottomInset =
+      MediaQuery.of(context).padding.bottom + kBottomNavigationBarHeight;
 
     return Container(
       decoration: BoxDecoration(
@@ -49,7 +51,7 @@ class _AvatarCropPreviewState extends State<AvatarCropPreview> {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + bottomInset),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -4,9 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../feed/data/providers/feed_providers.dart';
+import '../../../feed/domain/models/post.dart';
 import '../../data/providers/profile_providers.dart';
 import '../../domain/models/profile.dart';
 import '../widgets/profile_avatar.dart';
+
+final _userPostsProvider = FutureProvider.family<List<Post>, String>(
+  (ref, userId) => ref.watch(feedRepositoryProvider).fetchUserPosts(userId),
+);
 
 class ViewUserProfileScreen extends ConsumerWidget {
   const ViewUserProfileScreen({
@@ -32,6 +38,7 @@ class ViewUserProfileScreen extends ConsumerWidget {
     final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
 
     final profileAsync = ref.watch(fetchProfileProvider(userId));
+    final postsAsync = ref.watch(_userPostsProvider(userId));
 
     return Scaffold(
       body: SafeArea(
@@ -58,88 +65,205 @@ class ViewUserProfileScreen extends ConsumerWidget {
             ),
           ),
           data: (profile) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => context.pop(),
-                        icon: Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 20,
-                          color: textPrimary,
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: () => context.pop(),
+                              icon: Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                size: 20,
+                                color: textPrimary,
+                              ),
+                            ),
+                            Text(
+                              profile.username,
+                              style:
+                                  AppTextStyles.title.copyWith(color: textPrimary),
+                            ),
+                          ],
                         ),
-                      ),
-                      Text(
-                        profile.username,
-                        style: AppTextStyles.title.copyWith(color: textPrimary),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: ProfileAvatar(
-                      avatarUrl: profile.avatarUrl,
-                      size: 120,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    profile.username,
-                    style: AppTextStyles.headline.copyWith(color: textPrimary),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 6),
-                  if (profile.bio != null)
-                    Text(
-                      profile.bio!,
-                      style: AppTextStyles.body.copyWith(color: textSecondary),
-                      textAlign: TextAlign.center,
-                      maxLines: 3,
-                    ),
-                  const SizedBox(height: 24),
-                  _StatsRow(
-                    profile: profile,
-                    surfaceInset: surfaceInset,
-                    textPrimary: textPrimary,
-                    textSecondary: textSecondary,
-                    shadowLight: shadowLight,
-                    shadowDark: shadowDark,
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    height: 52,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: surfaceRaised,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: shadowLight,
-                          blurRadius: 14,
-                          offset: const Offset(-6, -6),
+                        const SizedBox(height: 24),
+                        Center(
+                          child: ProfileAvatar(
+                            avatarUrl: profile.avatarUrl,
+                            size: 120,
+                          ),
                         ),
-                        BoxShadow(
-                          color: shadowDark,
-                          blurRadius: 14,
-                          offset: const Offset(6, 6),
+                        const SizedBox(height: 16),
+                        Text(
+                          profile.username,
+                          style: AppTextStyles.headline
+                              .copyWith(color: textPrimary),
+                          textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 6),
+                        if (profile.bio != null)
+                          Text(
+                            profile.bio!,
+                            style: AppTextStyles.body
+                                .copyWith(color: textSecondary),
+                            textAlign: TextAlign.center,
+                            maxLines: 3,
+                          ),
+                        const SizedBox(height: 24),
+                        _StatsRow(
+                          profile: profile,
+                          surfaceInset: surfaceInset,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          shadowLight: shadowLight,
+                          shadowDark: shadowDark,
+                        ),
+                        const SizedBox(height: 20),
+                        Container(
+                          height: 52,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: surfaceRaised,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: shadowLight,
+                                blurRadius: 14,
+                                offset: const Offset(-6, -6),
+                              ),
+                              BoxShadow(
+                                color: shadowDark,
+                                blurRadius: 14,
+                                offset: const Offset(6, 6),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            'Follow',
+                            style: AppTextStyles.title.copyWith(color: primary),
+                          ),
+                        ),
+                        // TODO: Implement follow/unfollow.
+                        const SizedBox(height: 12),
                       ],
                     ),
-                    child: Text(
-                      'Follow',
-                      style: AppTextStyles.title.copyWith(color: primary),
-                    ),
                   ),
-                  // TODO: Implement follow/unfollow.
-                ],
-              ),
+                ),
+                _PostsSliver(
+                  postsAsync: postsAsync,
+                  textSecondary: textSecondary,
+                  primary: primary,
+                  isDark: isDark,
+                ),
+              ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _PostsSliver extends StatelessWidget {
+  const _PostsSliver({
+    required this.postsAsync,
+    required this.textSecondary,
+    required this.primary,
+    required this.isDark,
+  });
+
+  final AsyncValue<List<Post>> postsAsync;
+  final Color textSecondary;
+  final Color primary;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return postsAsync.when(
+      loading: () => SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: CircularProgressIndicator(color: primary),
+          ),
+        ),
+      ),
+      error: (error, stack) => SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Text(
+            'Unable to load posts.',
+            style: AppTextStyles.body.copyWith(color: primary),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+      data: (posts) {
+        if (posts.isEmpty) {
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+              child: Text(
+                'No posts yet.',
+                style: AppTextStyles.body.copyWith(color: textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+        return SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          sliver: SliverGrid(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => _PostGridTile(
+                post: posts[index],
+                isDark: isDark,
+              ),
+              childCount: posts.length,
+            ),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PostGridTile extends StatelessWidget {
+  const _PostGridTile({
+    required this.post,
+    required this.isDark,
+  });
+
+  final Post post;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final surfaceInset =
+        isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL;
+    final textSecondary =
+        isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        color: surfaceInset,
+        child: Image.network(
+          post.imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Center(
+            child: Icon(Icons.broken_image_rounded, color: textSecondary),
+          ),
         ),
       ),
     );

@@ -7,6 +7,7 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/feed/presentation/screens/post_creation_screen.dart';
+import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/profile/domain/models/profile.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -30,10 +31,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterScreen(),
       ),
 
-      // ── Feed ─────────────────────────────────────────────────────────────
-      GoRoute(
-        path: AppRoutes.feed,
-        builder: (context, state) => const FeedScreen(),
+      // ── Home Shell ───────────────────────────────────────────────────────
+      ShellRoute(
+        builder: (context, state, child) => HomeScreen(child: child),
+        routes: [
+          GoRoute(
+            path: AppRoutes.feed,
+            builder: (context, state) => const FeedScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.search,
+            builder: (context, state) => const SearchPlaceholderScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.notifications,
+            builder: (context, state) => const NotificationsPlaceholderScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.profile,
+            builder: (context, state) => const ProfileScreen(),
+          ),
+        ],
       ),
 
       // ── Post Creation (slides up from bottom) ────────────────────────────
@@ -63,11 +81,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // ── Profile ───────────────────────────────────────────────────────────
-      GoRoute(
-        path: AppRoutes.profile,
-        builder: (context, state) => const ProfileScreen(),
-      ),
       GoRoute(
         path: AppRoutes.editProfile,
         builder: (context, state) =>

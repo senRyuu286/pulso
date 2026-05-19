@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
-import '../../../../core/theme/theme_provider.dart';
 import '../../../../core/widgets/neumorphic_container.dart';
-import '../../../auth/data/providers/auth_providers.dart';
 import '../providers/feed_notifier.dart';
 import '../widgets/post_card.dart';
 
 /// Main feed screen — design spec section 9.
 ///
-/// Sticky wordmark top bar, single-column post list with pull-to-refresh,
-/// neumorphic bottom navigation bar with Home / Search / Create / Notifications / Profile.
+/// Sticky wordmark top bar, single-column post list with pull-to-refresh.
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
 
@@ -23,8 +17,6 @@ class FeedScreen extends ConsumerStatefulWidget {
 }
 
 class _FeedScreenState extends ConsumerState<FeedScreen> {
-  int _selectedTab = 0;
-
   @override
   void initState() {
     super.initState();
@@ -35,86 +27,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      appBar: const _PulsoAppBar(),
-      body: const _FeedBody(),
-      bottomNavigationBar: _NeumorphicNav(
-        selectedIndex: _selectedTab,
-        onTap: (i) {
-          if (i == 2) {
-            context.push(AppRoutes.createPost);
-            return;
-          }
-          if (i == 4) {
-            final userId = ref.read(authStateChangesProvider).asData?.value?.id;
-            if (userId != null) context.push(AppRoutes.profileFor(userId));
-            return;
-          }
-          setState(() => _selectedTab = i);
-        },
-      ),
-    );
-  }
-}
-
-// ─── Top App Bar ─────────────────────────────────────────────────────────────
-
-class _PulsoAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _PulsoAppBar();
-
-  @override
-  Size get preferredSize => const Size.fromHeight(64);
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Container(
-      color: cs.surface,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top,
-        left: 20,
-        right: 20,
-      ),
-      height: preferredSize.height + MediaQuery.of(context).padding.top,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            'Pulso',
-            style: GoogleFonts.fraunces(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurface,
-              height: 1.0,
-            ),
-          ),
-          const Spacer(),
-          Consumer(
-            builder: (context, ref, _) {
-              final mode = ref.watch(themeProvider);
-              final isDark = mode == ThemeMode.dark;
-              return GestureDetector(
-                onTap: () => ref.read(themeProvider.notifier).toggle(),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                    key: ValueKey(isDark),
-                    size: 24,
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 16),
-          Icon(Icons.notifications_none_rounded, size: 24, color: cs.onSurfaceVariant),
-        ],
-      ),
-    );
+    return const _FeedBody();
   }
 }
 
@@ -358,79 +271,3 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-// ─── Neumorphic Bottom Navigation Bar ────────────────────────────────────────
-
-class _NeumorphicNav extends StatelessWidget {
-  const _NeumorphicNav({required this.selectedIndex, required this.onTap});
-
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-
-  static const _icons = [
-    (outline: Icons.home_outlined,               filled: Icons.home_rounded),
-    (outline: Icons.search_rounded,              filled: Icons.search_rounded),
-    (outline: Icons.add_circle_outline,          filled: Icons.add_circle_rounded),
-    (outline: Icons.notifications_none_rounded,  filled: Icons.notifications_rounded),
-    (outline: Icons.person_outline_rounded,      filled: Icons.person_rounded),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final pulso = context.pulso;
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        boxShadow: [
-          BoxShadow(
-            color: pulso.shadowLight,
-            offset: const Offset(-6, -6),
-            blurRadius: pulso.shadowBlur,
-          ),
-          BoxShadow(
-            color: pulso.shadowDark,
-            offset: const Offset(6, 6),
-            blurRadius: pulso.shadowBlur,
-          ),
-        ],
-      ),
-      padding: EdgeInsets.only(bottom: bottomPad, top: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(_icons.length, (i) {
-          final isActive = i == selectedIndex;
-          final icon = isActive ? _icons[i].filled : _icons[i].outline;
-          return Semantics(
-            label: ['Home', 'Search', 'Create', 'Notifications', 'Profile'][i],
-            button: true,
-            child: GestureDetector(
-              onTap: () => onTap(i),
-              behavior: HitTestBehavior.opaque,
-              child: SizedBox(
-                width: 48,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 24, color: isActive ? cs.primary : cs.onSurfaceVariant),
-                    const SizedBox(height: 4),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: isActive ? 8 : 0,
-                      height: isActive ? 8 : 0,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isActive ? cs.primary : Colors.transparent,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}

@@ -63,6 +63,27 @@ class ProfileRepositoryImpl implements ProfileRepository {
         'follower_count': followerCount,
         'following_count': followingCount,
       });
+    } on PostgrestException catch (error) {
+      if (_isNotFound(error)) {
+        throw const ProfileNotFoundException();
+      }
+      if (_isRelationshipError(error)) {
+        final data = await _client
+            .from('profiles')
+            .select()
+            .eq('id', userId)
+            .maybeSingle();
+        if (data == null) {
+          throw const ProfileNotFoundException();
+        }
+        return Profile.fromJson({
+          ...data,
+          'post_count': 0,
+          'follower_count': 0,
+          'following_count': 0,
+        });
+      }
+      throw ProfileUpdateException(error.message);
     } on SocketException {
       throw const NetworkException();
     } on ProfileException {
@@ -177,5 +198,14 @@ class ProfileRepositoryImpl implements ProfileRepository {
       }
     }
     return null;
+  }
+
+  bool _isNotFound(PostgrestException error) {
+    return error.code == 'PGRST116';
+  }
+
+  bool _isRelationshipError(PostgrestException error) {
+    final message = error.message.toLowerCase();
+    return message.contains('relationship') || message.contains('foreign key');
   }
 }

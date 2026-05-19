@@ -145,7 +145,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   height: 52,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: primary.withOpacity(isSaveEnabled ? 1 : 0.6),
+                    color: primary.withValues(alpha: isSaveEnabled ? 1 : 0.6),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
