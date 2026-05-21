@@ -12,6 +12,9 @@ abstract interface class CommentRepository {
     required String content,
   });
 
+  /// Fetch a single comment by ID.
+  Future<Comment> fetchCommentById(String commentId);
+
   /// Delete a comment by ID.
   Future<void> deleteComment(String commentId);
 

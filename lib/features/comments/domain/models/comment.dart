@@ -22,6 +22,26 @@ class Comment {
   final int likesCount;
   final bool isLikedByMe;
 
+  factory Comment.fromMap(Map<String, dynamic> map) {
+    final profile = map['author'] as Map<String, dynamic>?;
+    final createdAtRaw = map['created_at'];
+    final createdAt = createdAtRaw is String
+        ? DateTime.parse(createdAtRaw)
+        : createdAtRaw as DateTime;
+
+    return Comment(
+      id: map['id'] as String,
+      postId: map['post_id'] as String,
+      userId: map['user_id'] as String,
+      username: profile?['username'] as String? ?? map['username'] as String?,
+      avatarUrl: profile?['avatar_url'] as String? ?? map['avatar_url'] as String?,
+      content: map['body'] as String? ?? map['content'] as String? ?? '',
+      createdAt: createdAt,
+      likesCount: (map['likes_count'] as int?) ?? 0,
+      isLikedByMe: (map['is_liked_by_me'] as bool?) ?? false,
+    );
+  }
+
   Comment copyWith({
     String? id,
     String? postId,

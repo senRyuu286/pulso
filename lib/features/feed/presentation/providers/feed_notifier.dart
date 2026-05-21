@@ -46,8 +46,6 @@ class FeedNotifier extends Notifier<FeedState> {
 
   FeedRepository get _repository => ref.read(feedRepositoryProvider);
 
-  String get _userId =>
-      ref.read(supabaseClientProvider).auth.currentUser?.id ?? '';
 
   Future<void> loadFeed() async {
     state = const FeedLoading();
@@ -70,33 +68,6 @@ class FeedNotifier extends Notifier<FeedState> {
       state = FeedError(e);
     } catch (e) {
       state = FeedError(UnknownFeedException(e.toString()));
-    }
-  }
-
-  /// Optimistic like toggle with rollback on Supabase error.
-  Future<void> toggleLike(Post post) async {
-    final snapshot = state;
-    if (snapshot is! FeedLoaded) return;
-
-    // Apply optimistic update immediately
-    final optimistic = snapshot.posts.map((p) {
-      if (p.id != post.id) return p;
-      return p.copyWith(
-        isLikedByMe: !p.isLikedByMe,
-        likesCount: p.isLikedByMe ? p.likesCount - 1 : p.likesCount + 1,
-      );
-    }).toList();
-    state = FeedLoaded(optimistic);
-
-    try {
-      await _repository.toggleLike(
-        postId: post.id,
-        userId: _userId,
-        currentlyLiked: post.isLikedByMe,
-      );
-    } catch (_) {
-      // Rollback to pre-tap state on any error
-      state = snapshot;
     }
   }
 

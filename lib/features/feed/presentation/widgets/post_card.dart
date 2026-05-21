@@ -1,10 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
 import '../../../../core/widgets/neumorphic_container.dart';
+import '../../../comments/presentation/widgets/comments_sheet.dart';
+import '../../../comments/presentation/providers/comment_notifier.dart';
 import '../../domain/models/post.dart';
 import 'like_button.dart';
 
@@ -298,27 +301,65 @@ class _Caption extends StatelessWidget {
 
 // ─── Action Row ───────────────────────────────────────────────────────────────
 
-class _ActionRow extends StatelessWidget {
+class _ActionRow extends ConsumerStatefulWidget {
   const _ActionRow({required this.post});
 
   final Post post;
 
   @override
+  ConsumerState<_ActionRow> createState() => _ActionRowState();
+
+}
+
+class _ActionRowState extends ConsumerState<_ActionRow> {
+  bool _requestedCount = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_requestedCount) return;
+    _requestedCount = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(commentCountNotifierProvider.notifier).ensureLoaded(widget.post.id);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final commentCount = ref.watch(
+      commentCountNotifierProvider
+          .select((map) => map[widget.post.id] ?? 0),
+    );
 
     return Row(
       children: [
-        LikeButton(post: post),
+        LikeButton(post: widget.post),
         const SizedBox(width: 20),
-        _IconStat(
-          icon: Icons.chat_bubble_outline_rounded,
-          count: 0,
-          color: cs.onSurfaceVariant,
+        GestureDetector(
+          onTap: () => _openComments(context),
+          child: _IconStat(
+            icon: Icons.chat_bubble_outline_rounded,
+            count: commentCount,
+            color: cs.onSurfaceVariant,
+          ),
         ),
         const SizedBox(width: 20),
         Icon(Icons.ios_share_rounded, size: 20, color: cs.onSurfaceVariant),
       ],
+    );
+  }
+
+  Future<void> _openComments(BuildContext context) async {
+    final theme = Theme.of(context);
+    final sheetBg = theme.colorScheme.surface.withValues(alpha: 0);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: sheetBg,
+      builder: (context) => CommentsSheet(post: widget.post),
     );
   }
 }

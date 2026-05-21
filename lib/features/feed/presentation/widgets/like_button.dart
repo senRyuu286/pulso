@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/models/post.dart';
-import '../providers/feed_notifier.dart';
+import '../../../likes/presentation/providers/like_notifier.dart';
 
 /// Full Pulso heartbeat like button — design spec section 5.2 + 6.
 ///
@@ -29,6 +29,7 @@ class _LikeButtonState extends ConsumerState<LikeButton>
   late final Animation<double> _burstAnim;
 
   bool _isAnimating = false;
+  bool _requestedLoad = false;
 
   @override
   void initState() {
@@ -47,11 +48,18 @@ class _LikeButtonState extends ConsumerState<LikeButton>
   }
 
   @override
-  void didUpdateWidget(LikeButton old) {
-    super.didUpdateWidget(old);
-    if (!old.post.isLikedByMe && widget.post.isLikedByMe) {
-      _burstCtrl.forward(from: 0.0);
-    }
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_requestedLoad) return;
+    _requestedLoad = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(likeNotifierProvider.notifier).ensureLoaded(
+            widget.post.id,
+            seedCount: widget.post.likesCount,
+            seedIsLiked: widget.post.isLikedByMe,
+          );
+    });
   }
 
   @override
@@ -71,7 +79,7 @@ class _LikeButtonState extends ConsumerState<LikeButton>
       curve: Curves.easeOut,
     );
 
-    ref.read(feedNotifierProvider.notifier).toggleLike(widget.post);
+    ref.read(likeNotifierProvider.notifier).toggleLike(widget.post.id);
     await _pressCtrl.animateTo(
       1.0,
       duration: const Duration(milliseconds: 150),
@@ -84,7 +92,29 @@ class _LikeButtonState extends ConsumerState<LikeButton>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isLiked = widget.post.isLikedByMe;
+
+    ref.listen<LikeState?>(
+      likeNotifierProvider.select((map) => map[widget.post.id]),
+      (previous, next) {
+        final prevLiked = previous is LikeLoaded
+            ? previous.isLikedByMe
+            : widget.post.isLikedByMe;
+        final nextLiked = next is LikeLoaded ? next.isLikedByMe : prevLiked;
+        if (!prevLiked && nextLiked) {
+          _burstCtrl.forward(from: 0.0);
+        }
+      },
+    );
+
+    final likeState = ref.watch(
+      likeNotifierProvider.select((map) => map[widget.post.id]),
+    );
+    final isLiked = likeState is LikeLoaded
+        ? likeState.isLikedByMe
+        : widget.post.isLikedByMe;
+    final count = likeState is LikeLoaded
+        ? likeState.count
+        : widget.post.likesCount;
 
     return Semantics(
       label: isLiked ? 'Unlike post' : 'Like post',
@@ -139,8 +169,8 @@ class _LikeButtonState extends ConsumerState<LikeButton>
                     child: FadeTransition(opacity: anim, child: child),
                   ),
                   child: Text(
-                    '${widget.post.likesCount}',
-                    key: ValueKey(widget.post.likesCount),
+                    '$count',
+                    key: ValueKey(count),
                     style: AppTextStyles.label.copyWith(
                       color: isLiked ? cs.primary : cs.onSurfaceVariant,
                     ),

@@ -11,10 +11,4 @@ abstract class FeedRepository {
     required String? caption,
     required String userId,
   });
-
-  Future<void> toggleLike({
-    required String postId,
-    required String userId,
-    required bool currentlyLiked,
-  });
 }

@@ -122,34 +122,6 @@ class FeedRepositoryImpl implements FeedRepository {
     }
   }
 
-  @override
-  Future<void> toggleLike({
-    required String postId,
-    required String userId,
-    required bool currentlyLiked,
-  }) async {
-    try {
-      if (currentlyLiked) {
-        await client
-            .from('likes')
-            .delete()
-            .eq('post_id', postId)
-            .eq('user_id', userId);
-      } else {
-        await client.from('likes').upsert({
-          'post_id': postId,
-          'user_id': userId,
-        });
-      }
-    } on SocketException {
-      throw const NetworkFeedException();
-    } on TimeoutException {
-      throw const NetworkFeedException();
-    } catch (error) {
-      throw UnknownFeedException(_messageFromError(error));
-    }
-  }
-
   String _messageFromError(Object error) {
     final text = error.toString();
     return text.isEmpty ? 'Something went wrong.' : text;
