@@ -9,7 +9,7 @@ import '../../../feed/data/providers/feed_providers.dart';
 import '../../../feed/domain/models/post.dart';
 import '../../data/providers/profile_providers.dart';
 import '../../domain/models/profile.dart';
-import '../../../social/presentation/providers/follow_notifier.dart';
+import '../providers/follow_notifier.dart';
 import '../widgets/profile_avatar.dart';
 
 final _userPostsProvider = FutureProvider.family<List<Post>, String>(

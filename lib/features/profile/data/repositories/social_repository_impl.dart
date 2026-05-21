@@ -94,7 +94,11 @@ class SocialRepositoryImpl implements SocialRepository {
   Future<UserProfile> getUserProfile(String userId) async {
     try {
       final results = await Future.wait<dynamic>([
-        client.from('profiles').select('id, username, avatar_url').eq('id', userId).single(),
+        client
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .eq('id', userId)
+            .single(),
         client.from('posts').select('id').eq('user_id', userId),
         client.from('follows').select('follower_id').eq('following_id', userId),
         client.from('follows').select('following_id').eq('follower_id', userId),
