@@ -6,7 +6,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
 import '../../../../core/widgets/neumorphic_container.dart';
 import '../../domain/models/post.dart';
-import '../../../like/presentation/widgets/like_button.dart';
+import 'like_button.dart';
 
 /// Post card — design spec section 5.1.
 ///
