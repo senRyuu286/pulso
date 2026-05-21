@@ -37,9 +37,24 @@ final likeNotifierProvider =
 
 class LikeNotifier extends Notifier<LikeMap> {
   RealtimeChannel? _channel;
+  String? _lastUserId;
 
   @override
   LikeMap build() {
+    _lastUserId = _userId;
+    ref.listen(authStateChangesProvider, (previous, next) {
+      final previousId = previous?.maybeWhen(
+        data: (user) => user?.id,
+        orElse: () => null,
+      );
+      final nextId = next.maybeWhen(
+        data: (user) => user?.id,
+        orElse: () => null,
+      );
+      if (previousId == nextId) return;
+      _lastUserId = nextId;
+      state = {};
+    });
     _subscribeToLikes();
     ref.onDispose(_dispose);
     return {};
@@ -58,6 +73,10 @@ class LikeNotifier extends Notifier<LikeMap> {
     int? seedCount,
     bool? seedIsLiked,
   }) {
+    if (_lastUserId != _userId) {
+      _lastUserId = _userId;
+      state = {};
+    }
     if (state.containsKey(postId)) return;
 
     if (seedCount != null || seedIsLiked != null) {

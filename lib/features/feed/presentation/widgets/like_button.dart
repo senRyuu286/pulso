@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/models/post.dart';
+import '../../../auth/data/providers/auth_providers.dart';
 import '../../../likes/presentation/providers/like_notifier.dart';
 
 /// Full Pulso heartbeat like button — design spec section 5.2 + 6.
@@ -30,10 +31,15 @@ class _LikeButtonState extends ConsumerState<LikeButton>
 
   bool _isAnimating = false;
   bool _requestedLoad = false;
+  String? _lastUserId;
+  bool _seedIsLiked = false;
 
   @override
   void initState() {
     super.initState();
+
+    _lastUserId = ref.read(supabaseClientProvider).auth.currentUser?.id;
+    _seedIsLiked = widget.post.isLikedByMe;
 
     _pressCtrl = AnimationController(vsync: this, value: 1.0);
     _scale = Tween<double>(begin: 0.92, end: 1.0).animate(
@@ -57,7 +63,7 @@ class _LikeButtonState extends ConsumerState<LikeButton>
       ref.read(likeNotifierProvider.notifier).ensureLoaded(
             widget.post.id,
             seedCount: widget.post.likesCount,
-            seedIsLiked: widget.post.isLikedByMe,
+            seedIsLiked: _seedIsLiked,
           );
     });
   }
@@ -92,6 +98,22 @@ class _LikeButtonState extends ConsumerState<LikeButton>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final currentUserId =
+        ref.watch(supabaseClientProvider).auth.currentUser?.id;
+
+    if (currentUserId != _lastUserId) {
+      _lastUserId = currentUserId;
+      _seedIsLiked = false;
+      _requestedLoad = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(likeNotifierProvider.notifier).ensureLoaded(
+              widget.post.id,
+              seedCount: widget.post.likesCount,
+              seedIsLiked: _seedIsLiked,
+            );
+      });
+    }
 
     ref.listen<LikeState?>(
       likeNotifierProvider.select((map) => map[widget.post.id]),
@@ -111,7 +133,7 @@ class _LikeButtonState extends ConsumerState<LikeButton>
     );
     final isLiked = likeState is LikeLoaded
         ? likeState.isLikedByMe
-        : widget.post.isLikedByMe;
+        : _seedIsLiked;
     final count = likeState is LikeLoaded
         ? likeState.count
         : widget.post.likesCount;
