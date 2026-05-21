@@ -13,7 +13,8 @@ class CommentRepositoryImpl implements CommentRepository {
 
   final supabase.SupabaseClient client;
 
-  static const String _commentSelect = 'id, post_id, user_id, body, created_at';
+  static const String _commentSelect =
+      'id, post_id, user_id, body, created_at, comment_likes(user_id)';
 
   @override
   Future<List<Comment>> fetchCommentsByPostId(String postId) async {
@@ -123,13 +124,39 @@ class CommentRepositoryImpl implements CommentRepository {
     required String userId,
     required bool currentlyLiked,
   }) async {
-    return;
+    try {
+      if (currentlyLiked) {
+        await client
+            .from('comment_likes')
+            .delete()
+            .eq('comment_id', commentId)
+            .eq('user_id', userId);
+      } else {
+        await client.from('comment_likes').upsert(
+          {
+            'comment_id': commentId,
+            'user_id': userId,
+          },
+          onConflict: 'comment_id,user_id',
+        );
+      }
+    } on SocketException {
+      throw const CommentLikeException('Network error.');
+    } on TimeoutException {
+      throw const CommentLikeException('Network error.');
+    } on supabase.PostgrestException catch (error) {
+      throw CommentLikeException(error.message);
+    } catch (error) {
+      throw UnknownCommentException(error.toString());
+    }
   }
 
   Future<List<Comment>> _hydrateComments(
     List<Map<String, dynamic>> rows,
   ) async {
     if (rows.isEmpty) return [];
+
+    final currentUserId = client.auth.currentUser?.id ?? '';
 
     final userIds = rows
         .map((row) => row['user_id'] as String)
@@ -151,10 +178,17 @@ class CommentRepositoryImpl implements CommentRepository {
 
     return rows.map((row) {
       final profile = profilesById[row['user_id'] as String];
+      final commentLikes = (row['comment_likes'] as List?) ?? [];
+      final isLikedByMe = currentUserId.isNotEmpty && commentLikes.any((like) {
+        final likeMap = like as Map<String, dynamic>;
+        return likeMap['user_id'] == currentUserId;
+      });
       final enriched = {
         ...row,
         if (profile != null) 'username': profile['username'],
         if (profile != null) 'avatar_url': profile['avatar_url'],
+        'likes_count': commentLikes.length,
+        'is_liked_by_me': isLikedByMe,
       };
       return Comment.fromMap(enriched);
     }).toList();

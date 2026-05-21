@@ -17,10 +17,13 @@ class SocialRepositoryImpl implements SocialRepository {
     required String followingId,
   }) async {
     try {
-      await client.from('follows').upsert({
-        'follower_id': followerId,
-        'following_id': followingId,
-      });
+      await client.from('follows').upsert(
+        {
+          'follower_id': followerId,
+          'following_id': followingId,
+        },
+        onConflict: 'follower_id,following_id',
+      );
     } on SocketException {
       rethrow;
     } on TimeoutException {

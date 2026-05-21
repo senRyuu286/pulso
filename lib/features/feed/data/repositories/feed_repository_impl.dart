@@ -24,8 +24,8 @@ class FeedRepositoryImpl implements FeedRepository {
           .from('posts')
           .select('''
             *,
-            likes(user_id),
-            author:profiles!posts_user_id_fkey(id, username, avatar_url)
+            likes!fk_likes_posts(user_id),
+            author:profiles!fk_posts_profiles(id, username, avatar_url)
           ''')
           .order('created_at', ascending: false)
           .range(from, to);
@@ -54,8 +54,8 @@ class FeedRepositoryImpl implements FeedRepository {
           .from('posts')
           .select('''
             *,
-            likes(user_id),
-            author:profiles!posts_user_id_fkey(id, username, avatar_url)
+            likes!fk_likes_posts(user_id),
+            author:profiles!fk_posts_profiles(id, username, avatar_url)
           ''')
           .eq('user_id', userId)
           .order('created_at', ascending: false)
@@ -105,8 +105,8 @@ class FeedRepositoryImpl implements FeedRepository {
           })
           .select('''
             *,
-            likes(user_id),
-            author:profiles!posts_user_id_fkey(id, username, avatar_url)
+            likes!fk_likes_posts(user_id),
+            author:profiles!fk_posts_profiles(id, username, avatar_url)
           ''')
           .single();
 

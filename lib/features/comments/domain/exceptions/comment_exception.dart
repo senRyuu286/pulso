@@ -23,6 +23,11 @@ final class CommentDeletionException extends CommentException {
   const CommentDeletionException(super.message);
 }
 
+/// Exception thrown when a comment like toggle fails.
+final class CommentLikeException extends CommentException {
+  const CommentLikeException(super.message);
+}
+
 /// Exception thrown for unknown comment errors.
 final class UnknownCommentException extends CommentException {
   const UnknownCommentException(String message) : super('Unknown error: $message');

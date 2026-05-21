@@ -51,10 +51,13 @@ class LikeRepositoryImpl implements LikeRepository {
             .eq('post_id', postId)
             .eq('user_id', userId);
       } else {
-        await client.from('likes').upsert({
-          'post_id': postId,
-          'user_id': userId,
-        });
+        await client.from('likes').upsert(
+          {
+            'post_id': postId,
+            'user_id': userId,
+          },
+          onConflict: 'post_id,user_id',
+        );
       }
     } on SocketException {
       rethrow;
