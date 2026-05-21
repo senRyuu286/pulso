@@ -65,4 +65,17 @@ class LikeRepositoryImpl implements LikeRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<int> likeCount(String postId) async {
+    try {
+      final data =
+          await client.from('likes').select('user_id').eq('post_id', postId);
+      return (data as List).length;
+    } on SocketException {
+      rethrow;
+    } on TimeoutException {
+      rethrow;
+    }
+  }
 }

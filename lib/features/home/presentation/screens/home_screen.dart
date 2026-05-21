@@ -7,6 +7,7 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../notifications/presentation/providers/notification_notifier.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({
@@ -25,6 +26,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     final selectedIndex = _indexFromLocation(location);
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
 
     return Scaffold(
       extendBody: true,
@@ -32,6 +34,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: widget.child,
       bottomNavigationBar: _NeumorphicNav(
         selectedIndex: selectedIndex,
+        unreadNotificationCount: unreadCount,
         onTap: (i) {
           if (i == 2) {
             context.push(AppRoutes.createPost);
@@ -124,45 +127,7 @@ class _PulsoAppBar extends StatelessWidget implements PreferredSizeWidget {
               );
             },
           ),
-          const SizedBox(width: 16),
-          Icon(
-            Icons.notifications_none_rounded,
-            size: 24,
-            color: cs.onSurfaceVariant,
-          ),
         ],
-      ),
-    );
-  }
-}
-
-// ─── Placeholder Screens ─────────────────────────────────────────────────────
-
-class SearchPlaceholderScreen extends StatelessWidget {
-  const SearchPlaceholderScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Text(
-        'Search coming soon',
-        style: AppTextStyles.title.copyWith(color: cs.onSurfaceVariant),
-      ),
-    );
-  }
-}
-
-class NotificationsPlaceholderScreen extends StatelessWidget {
-  const NotificationsPlaceholderScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Text(
-        'Notifications coming soon',
-        style: AppTextStyles.title.copyWith(color: cs.onSurfaceVariant),
       ),
     );
   }
@@ -171,9 +136,14 @@ class NotificationsPlaceholderScreen extends StatelessWidget {
 // ─── Neumorphic Bottom Navigation Bar ────────────────────────────────────────
 
 class _NeumorphicNav extends StatelessWidget {
-  const _NeumorphicNav({required this.selectedIndex, required this.onTap});
+  const _NeumorphicNav({
+    required this.selectedIndex,
+    required this.unreadNotificationCount,
+    required this.onTap,
+  });
 
   final int selectedIndex;
+  final int unreadNotificationCount;
   final ValueChanged<int> onTap;
 
   static const _icons = [
@@ -215,6 +185,8 @@ class _NeumorphicNav extends StatelessWidget {
         children: List.generate(_icons.length, (i) {
           final isActive = i == selectedIndex;
           final icon = isActive ? _icons[i].filled : _icons[i].outline;
+          final showBadge = i == 3 && unreadNotificationCount > 0;
+
           return Semantics(
             label: ['Home', 'Search', 'Create', 'Notifications', 'Profile'][i],
             button: true,
@@ -226,10 +198,40 @@ class _NeumorphicNav extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      icon,
-                      size: 24,
-                      color: isActive ? cs.primary : cs.onSurfaceVariant,
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          icon,
+                          size: 24,
+                          color: isActive ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                        if (showBadge)
+                          Positioned(
+                            top: -4,
+                            right: -6,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              constraints: const BoxConstraints(
+                                  minWidth: 14, minHeight: 14),
+                              decoration: BoxDecoration(
+                                color: cs.error,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                unreadNotificationCount > 9
+                                    ? '9+'
+                                    : '$unreadNotificationCount',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: cs.onError,
+                                  fontSize: 9,
+                                  height: 1,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     AnimatedContainer(

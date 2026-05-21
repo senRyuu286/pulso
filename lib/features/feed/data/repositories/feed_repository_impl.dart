@@ -13,6 +13,13 @@ class FeedRepositoryImpl implements FeedRepository {
 
   final supabase.SupabaseClient client;
 
+  static const String _postSelect = '''
+    *,
+    likes!fk_likes_posts(user_id),
+    reposts!fk_reposts_posts(user_id),
+    author:profiles!fk_posts_profiles(id, username, avatar_url)
+  ''';
+
   @override
   Future<List<Post>> fetchFeed({int page = 0, int pageSize = 20}) async {
     try {
@@ -22,11 +29,7 @@ class FeedRepositoryImpl implements FeedRepository {
 
       final data = await client
           .from('posts')
-          .select('''
-            *,
-            likes!fk_likes_posts(user_id),
-            author:profiles!fk_posts_profiles(id, username, avatar_url)
-          ''')
+          .select(_postSelect)
           .order('created_at', ascending: false)
           .range(from, to);
 
@@ -44,27 +47,67 @@ class FeedRepositoryImpl implements FeedRepository {
   }
 
   @override
-  Future<List<Post>> fetchUserPosts(String userId, {int page = 0, int pageSize = 30}) async {
+  Future<List<Post>> fetchUserPosts(String userId,
+      {int page = 0, int pageSize = 30}) async {
     try {
       final currentUserId = client.auth.currentUser?.id ?? '';
-      final from = page * pageSize;
-      final to = from + pageSize - 1;
 
-      final data = await client
-          .from('posts')
-          .select('''
-            *,
-            likes!fk_likes_posts(user_id),
-            author:profiles!fk_posts_profiles(id, username, avatar_url)
-          ''')
-          .eq('user_id', userId)
-          .order('created_at', ascending: false)
-          .range(from, to);
+      final results = await Future.wait<dynamic>([
+        client
+            .from('posts')
+            .select(_postSelect)
+            .eq('user_id', userId)
+            .order('created_at', ascending: false),
+        client.from('reposts').select('post_id').eq('user_id', userId),
+        client
+            .from('profiles')
+            .select('username')
+            .eq('id', userId)
+            .maybeSingle(),
+      ]);
 
-      return (data as List<dynamic>)
+      final ownPosts = (results[0] as List<dynamic>)
           .cast<Map<String, dynamic>>()
           .map((row) => Post.fromMap(row, currentUserId: currentUserId))
           .toList();
+
+      final repostIds = (results[1] as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .map((r) => r['post_id'] as String)
+          .toList();
+
+      final reposterUsername =
+          (results[2] as Map<String, dynamic>?)?['username'] as String? ?? '';
+
+      List<Post> repostedPosts = [];
+      if (repostIds.isNotEmpty) {
+        // Exclude posts the user already owns to avoid duplicates
+        final ownIds = ownPosts.map((p) => p.id).toSet();
+        final foreignIds =
+            repostIds.where((id) => !ownIds.contains(id)).toList();
+        if (foreignIds.isNotEmpty) {
+          final repostedData = await client
+              .from('posts')
+              .select(_postSelect)
+              .inFilter('id', foreignIds);
+
+          repostedPosts = (repostedData as List<dynamic>)
+              .cast<Map<String, dynamic>>()
+              .map((row) => Post.fromMap(
+                    {...row, 'reposted_by_username': reposterUsername},
+                    currentUserId: currentUserId,
+                  ))
+              .toList();
+        }
+      }
+
+      final allPosts = [...ownPosts, ...repostedPosts]
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      final from = page * pageSize;
+      if (from >= allPosts.length) return [];
+      final to = min(from + pageSize, allPosts.length);
+      return allPosts.sublist(from, to);
     } on SocketException {
       throw const NetworkFeedException();
     } on TimeoutException {
@@ -93,7 +136,6 @@ class FeedRepositoryImpl implements FeedRepository {
             ),
           );
 
-      // Public bucket: URLs are publicly readable.
       final imageUrl = client.storage.from('posts').getPublicUrl(storagePath);
 
       final data = await client
@@ -103,14 +145,17 @@ class FeedRepositoryImpl implements FeedRepository {
             'image_url': imageUrl,
             'caption': caption,
           })
-          .select('''
-            *,
-            likes!fk_likes_posts(user_id),
-            author:profiles!fk_posts_profiles(id, username, avatar_url)
-          ''')
+          .select(_postSelect)
           .single();
 
-      return Post.fromMap(data, currentUserId: userId);
+      final post = Post.fromMap(data, currentUserId: userId);
+
+      // Fan out notifications to followers (best-effort — does not fail post creation)
+      try {
+        await _fanOutNotifications(postId: post.id, actorId: userId);
+      } catch (_) {}
+
+      return post;
     } on SocketException {
       throw const NetworkFeedException();
     } on TimeoutException {
@@ -120,6 +165,95 @@ class FeedRepositoryImpl implements FeedRepository {
     } catch (error) {
       throw UnknownFeedException(_messageFromError(error));
     }
+  }
+
+  @override
+  Future<void> deletePost(String postId) async {
+    try {
+      await client.from('posts').delete().eq('id', postId);
+    } on SocketException {
+      throw const NetworkFeedException();
+    } on TimeoutException {
+      throw const NetworkFeedException();
+    } catch (error) {
+      throw UnknownFeedException(_messageFromError(error));
+    }
+  }
+
+  @override
+  Future<void> repost({
+    required String postId,
+    required String userId,
+    required bool currentlyReposted,
+  }) async {
+    try {
+      if (currentlyReposted) {
+        await client
+            .from('reposts')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', userId);
+      } else {
+        await client.from('reposts').upsert(
+          {'post_id': postId, 'user_id': userId},
+          onConflict: 'post_id,user_id',
+        );
+      }
+    } on SocketException {
+      throw const NetworkFeedException();
+    } on TimeoutException {
+      throw const NetworkFeedException();
+    } catch (error) {
+      throw UnknownFeedException(_messageFromError(error));
+    }
+  }
+
+  @override
+  Future<Post> fetchPostById(String postId) async {
+    try {
+      final currentUserId = client.auth.currentUser?.id ?? '';
+      final data = await client
+          .from('posts')
+          .select(_postSelect)
+          .eq('id', postId)
+          .single();
+      return Post.fromMap(data, currentUserId: currentUserId);
+    } on SocketException {
+      throw const NetworkFeedException();
+    } on TimeoutException {
+      throw const NetworkFeedException();
+    } catch (error) {
+      throw UnknownFeedException(_messageFromError(error));
+    }
+  }
+
+  Future<void> _fanOutNotifications({
+    required String postId,
+    required String actorId,
+  }) async {
+    final followersData = await client
+        .from('follows')
+        .select('follower_id')
+        .eq('following_id', actorId);
+
+    final followerIds = (followersData as List<dynamic>)
+        .cast<Map<String, dynamic>>()
+        .map((f) => f['follower_id'] as String)
+        .toList();
+
+    if (followerIds.isEmpty) return;
+
+    final notifications = followerIds
+        .map((followerId) => {
+              'recipient_id': followerId,
+              'actor_id': actorId,
+              'post_id': postId,
+              'type': 'new_post',
+              'is_read': false,
+            })
+        .toList();
+
+    await client.from('notifications').insert(notifications);
   }
 
   String _messageFromError(Object error) {

@@ -45,7 +45,13 @@ class CommentNotifier extends Notifier<CommentMap> {
 
   @override
   CommentMap build() {
-    ref.onDispose(_dispose);
+    final capturedClient = _client;
+    ref.onDispose(() {
+      for (final channel in _channels.values) {
+        capturedClient.removeChannel(channel);
+      }
+      _channels.clear();
+    });
     return {};
   }
 
@@ -187,12 +193,6 @@ class CommentNotifier extends Notifier<CommentMap> {
     _client.removeChannel(channel);
   }
 
-  void _dispose() {
-    for (final entry in _channels.entries) {
-      _client.removeChannel(entry.value);
-    }
-    _channels.clear();
-  }
 }
 
 // ─── Comment Counts (Realtime) ───────────────────────────────────────────────
@@ -208,7 +208,13 @@ class CommentCountNotifier extends Notifier<CommentCountMap> {
   @override
   CommentCountMap build() {
     _subscribeToCounts();
-    ref.onDispose(_dispose);
+    final capturedClient = _client;
+    ref.onDispose(() {
+      final channel = _channel;
+      if (channel == null) return;
+      capturedClient.removeChannel(channel);
+      _channel = null;
+    });
     return {};
   }
 
@@ -257,10 +263,4 @@ class CommentCountNotifier extends Notifier<CommentCountMap> {
     state = {...state, postId: next};
   }
 
-  void _dispose() {
-    final channel = _channel;
-    if (channel == null) return;
-    _client.removeChannel(channel);
-    _channel = null;
-  }
 }

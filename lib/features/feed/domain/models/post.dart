@@ -6,9 +6,12 @@ class Post {
     required this.createdAt,
     required this.likesCount,
     required this.isLikedByMe,
+    required this.repostsCount,
+    required this.isRepostedByMe,
     this.caption,
     this.username,
     this.avatarUrl,
+    this.repostedByUsername,
   });
 
   final String id;
@@ -18,11 +21,15 @@ class Post {
   final DateTime createdAt;
   final int likesCount;
   final bool isLikedByMe;
+  final int repostsCount;
+  final bool isRepostedByMe;
   final String? username;
   final String? avatarUrl;
+  final String? repostedByUsername;
 
   factory Post.fromMap(Map<String, dynamic> map, {required String currentUserId}) {
     final likes = (map['likes'] as List?) ?? [];
+    final reposts = (map['reposts'] as List?) ?? [];
     final profile = map['author'] as Map<String, dynamic>?;
     return Post(
       id: map['id'] as String,
@@ -32,14 +39,20 @@ class Post {
       createdAt: DateTime.parse(map['created_at'] as String),
       likesCount: likes.length,
       isLikedByMe: likes.any((l) => (l as Map)['user_id'] == currentUserId),
+      repostsCount: reposts.length,
+      isRepostedByMe: reposts.any((r) => (r as Map)['user_id'] == currentUserId),
       username: profile?['username'] as String?,
       avatarUrl: profile?['avatar_url'] as String?,
+      repostedByUsername: map['reposted_by_username'] as String?,
     );
   }
 
   Post copyWith({
     int? likesCount,
     bool? isLikedByMe,
+    int? repostsCount,
+    bool? isRepostedByMe,
+    String? repostedByUsername,
   }) {
     return Post(
       id: id,
@@ -49,8 +62,11 @@ class Post {
       createdAt: createdAt,
       likesCount: likesCount ?? this.likesCount,
       isLikedByMe: isLikedByMe ?? this.isLikedByMe,
+      repostsCount: repostsCount ?? this.repostsCount,
+      isRepostedByMe: isRepostedByMe ?? this.isRepostedByMe,
       username: username,
       avatarUrl: avatarUrl,
+      repostedByUsername: repostedByUsername ?? this.repostedByUsername,
     );
   }
 

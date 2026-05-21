@@ -11,4 +11,14 @@ abstract class FeedRepository {
     required String? caption,
     required String userId,
   });
+
+  Future<void> deletePost(String postId);
+
+  Future<void> repost({
+    required String postId,
+    required String userId,
+    required bool currentlyReposted,
+  });
+
+  Future<Post> fetchPostById(String postId);
 }

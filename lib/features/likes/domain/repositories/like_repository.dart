@@ -11,4 +11,6 @@ abstract class LikeRepository {
     required String userId,
     required bool currentlyLiked,
   });
+
+  Future<int> likeCount(String postId);
 }

@@ -8,8 +8,11 @@ abstract final class AppRoutes {
   static const String profile = '/profile';
   static const String editProfile = '/profile/edit';
   static const String userProfile = '/user/:userId';
+  static const String postDetail = '/post/:postId';
 
   static String profileFor(String userId) => '/user/$userId';
+
+  static String postDetailFor(String postId) => '/post/$postId';
 
   static bool isAuthRoute(String location) {
     return location == login || location == register;

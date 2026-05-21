@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,7 @@ import '../../../comments/presentation/widgets/comments_sheet.dart';
 import '../../../comments/presentation/providers/comment_notifier.dart';
 import '../../domain/models/post.dart';
 import 'like_button.dart';
+import 'repost_button.dart';
 
 /// Post card — design spec section 5.1.
 ///
@@ -31,6 +34,7 @@ class _PostCardState extends State<PostCard>
   late final AnimationController _entryCtrl;
   late final Animation<double> _opacity;
   late final Animation<Offset> _slide;
+  Timer? _animTimer;
 
   bool _expanded = false;
 
@@ -48,13 +52,14 @@ class _PostCardState extends State<PostCard>
     ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
 
     final delay = widget.index < 8 ? widget.index * 60 : 0;
-    Future.delayed(Duration(milliseconds: delay), () {
+    _animTimer = Timer(Duration(milliseconds: delay), () {
       if (mounted) _entryCtrl.forward();
     });
   }
 
   @override
   void dispose() {
+    _animTimer?.cancel();
     _entryCtrl.dispose();
     super.dispose();
   }
@@ -73,6 +78,8 @@ class _PostCardState extends State<PostCard>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (widget.post.repostedByUsername != null)
+                _RepostedBanner(username: widget.post.repostedByUsername!),
               _CardHeader(post: widget.post),
               const SizedBox(height: 12),
               AspectRatio(
@@ -336,7 +343,7 @@ class _ActionRowState extends ConsumerState<_ActionRow> {
     return Row(
       children: [
         LikeButton(post: widget.post),
-        const SizedBox(width: 20),
+        const SizedBox(width: 16),
         GestureDetector(
           onTap: () => _openComments(context),
           child: _IconStat(
@@ -345,8 +352,8 @@ class _ActionRowState extends ConsumerState<_ActionRow> {
             color: cs.onSurfaceVariant,
           ),
         ),
-        const SizedBox(width: 20),
-        Icon(Icons.ios_share_rounded, size: 20, color: cs.onSurfaceVariant),
+        const SizedBox(width: 16),
+        RepostButton(post: widget.post),
       ],
     );
   }
@@ -446,6 +453,32 @@ class _ImageError extends StatelessWidget {
       color: pulso.surfaceInset,
       child: Center(
         child: Icon(Icons.broken_image_outlined, color: cs.onSurfaceVariant, size: 32),
+      ),
+    );
+  }
+}
+
+// ─── Repost Banner ────────────────────────────────────────────────────────────
+
+class _RepostedBanner extends StatelessWidget {
+  const _RepostedBanner({required this.username});
+
+  final String username;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(Icons.repeat_rounded, size: 14, color: cs.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Text(
+            'Reposted by @$username',
+            style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }

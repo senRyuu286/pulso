@@ -56,7 +56,14 @@ class LikeNotifier extends Notifier<LikeMap> {
       state = {};
     });
     _subscribeToLikes();
-    ref.onDispose(_dispose);
+    // Capture client now (ref.read is invalid inside onDispose callbacks in Riverpod 3.x)
+    final capturedClient = _client;
+    ref.onDispose(() {
+      final channel = _channel;
+      if (channel == null) return;
+      capturedClient.removeChannel(channel);
+      _channel = null;
+    });
     return {};
   }
 
@@ -188,10 +195,4 @@ class LikeNotifier extends Notifier<LikeMap> {
     };
   }
 
-  void _dispose() {
-    final channel = _channel;
-    if (channel == null) return;
-    _client.removeChannel(channel);
-    _channel = null;
-  }
 }

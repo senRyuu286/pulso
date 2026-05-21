@@ -5,13 +5,17 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/data/providers/auth_providers.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/feed/domain/models/post.dart';
 import '../../features/feed/presentation/screens/feed_screen.dart';
 import '../../features/feed/presentation/screens/post_creation_screen.dart';
+import '../../features/feed/presentation/screens/post_detail_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/profile/domain/models/profile.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/profile/presentation/screens/view_user_profile_screen.dart';
+import '../../features/search/presentation/screens/search_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -41,11 +45,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.search,
-            builder: (context, state) => const SearchPlaceholderScreen(),
+            builder: (context, state) => const SearchScreen(),
           ),
           GoRoute(
             path: AppRoutes.notifications,
-            builder: (context, state) => const NotificationsPlaceholderScreen(),
+            builder: (context, state) => const NotificationsScreen(),
           ),
           GoRoute(
             path: AppRoutes.profile,
@@ -60,8 +64,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
           child: const PostCreationScreen(),
-          // 260ms easeOut feels instant; shorter than 350ms means less time
-          // the transition has to run heavy paint work.
           transitionDuration: const Duration(milliseconds: 260),
           reverseTransitionDuration: const Duration(milliseconds: 220),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -72,9 +74,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ).animate(
                 CurvedAnimation(parent: animation, curve: Curves.easeOut),
               ),
-              // RepaintBoundary: PostCreationScreen is rasterised once into a
-              // GPU layer. Every animation tick just composites that layer at a
-              // new offset — CustomPainter.paint() is never called mid-flight.
               child: RepaintBoundary(child: child),
             );
           },
@@ -92,6 +91,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           userId: state.pathParameters['userId']!,
         ),
       ),
+
+      // ── Post Detail ──────────────────────────────────────────────────────
+      GoRoute(
+        path: AppRoutes.postDetail,
+        builder: (context, state) => PostDetailScreen(
+          postId: state.pathParameters['postId']!,
+          initialPost: state.extra as Post?,
+        ),
+      ),
     ],
     redirect: (context, state) {
       if (authState.isLoading) return null;
@@ -106,4 +114,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
   );
 });
-
