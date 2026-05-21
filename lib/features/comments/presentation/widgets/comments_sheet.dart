@@ -209,6 +209,12 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
 
             return CommentCard(
               comment: comment,
+              onLikeTap: (currentUserId ?? '').isNotEmpty
+                  ? () => _notifier.toggleCommentLike(
+                        postId: widget.post.id,
+                        comment: comment,
+                      )
+                  : null,
               onDeleteTap: canDelete
               ? () => _notifier.deleteComment(
                         postId: widget.post.id,

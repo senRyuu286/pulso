@@ -13,8 +13,9 @@ class CommentRepositoryImpl implements CommentRepository {
 
   final supabase.SupabaseClient client;
 
-  static const String _commentSelect =
-      'id, post_id, user_id, body, created_at, comment_likes(user_id)';
+    static const String _commentSelect =
+      'id, post_id, user_id, body, created_at, '
+      'comment_likes!fk_comment_likes_comments(user_id)';
 
   @override
   Future<List<Comment>> fetchCommentsByPostId(String postId) async {
