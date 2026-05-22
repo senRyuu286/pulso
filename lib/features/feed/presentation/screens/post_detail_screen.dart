@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/widgets/neumorphic_button.dart';
-import '../../../../core/widgets/neumorphic_container.dart';
 import '../../../auth/data/providers/auth_providers.dart';
 import '../../../comments/presentation/providers/comment_notifier.dart';
 import '../../../comments/presentation/widgets/comment_card.dart';
@@ -42,10 +40,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   @override
   void dispose() {
     _commentController.dispose();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(commentNotifierProvider.notifier).clear(widget.postId);
-    });
+    final notifier = ref.read(commentNotifierProvider.notifier);
+    final postId = widget.postId;
     super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifier.clear(postId);
+    });
   }
 
   @override
@@ -128,9 +128,9 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (widget.requestedLoad) return;
-    widget.onLoadRequested();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      widget.onLoadRequested();
       ref.read(commentNotifierProvider.notifier).ensureLoaded(widget.post.id);
       ref.read(repostNotifierProvider.notifier).ensureLoaded(
             widget.post.id,
@@ -243,9 +243,11 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
               child: Row(
                 children: [
                   Expanded(
-                    child: NeumorphicContainer(
-                      state: NeumorphicState.inset,
-                      borderRadius: 16,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: TextField(
                         controller: widget.commentController,
@@ -263,13 +265,12 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  NeumorphicButton(
+                  const SizedBox(width: 8),
+                  IconButton(
                     onPressed: canSubmit ? widget.onSend : null,
-                    padding: const EdgeInsets.all(12),
-                    child: Icon(
+                    icon: Icon(
                       Icons.send_rounded,
-                      size: 18,
+                      size: 20,
                       color: canSubmit ? cs.primary : cs.onSurfaceVariant,
                     ),
                   ),

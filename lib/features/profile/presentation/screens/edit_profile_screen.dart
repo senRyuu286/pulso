@@ -56,8 +56,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final textPlaceholder =
         isDark ? AppColors.textPlaceholderD : AppColors.textPlaceholderL;
     final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
 
     ref.listen<ProfileState>(profileProvider, (previous, next) {
       if (next is ProfileLoaded) {
@@ -110,8 +108,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 hintText: '@username',
                 textColor: textPrimary,
                 placeholderColor: textPlaceholder,
-                shadowLight: shadowLight,
-                shadowDark: shadowDark,
                 isDark: isDark,
                 readOnly: true,
               ),
@@ -126,8 +122,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 hintText: 'Your name',
                 textColor: textPrimary,
                 placeholderColor: textPlaceholder,
-                shadowLight: shadowLight,
-                shadowDark: shadowDark,
                 isDark: isDark,
               ),
               const SizedBox(height: 20),
@@ -141,8 +135,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 hintText: 'Tell the community about yourself...',
                 textColor: textPrimary,
                 placeholderColor: textPlaceholder,
-                shadowLight: shadowLight,
-                shadowDark: shadowDark,
                 isDark: isDark,
                 maxLines: 4,
               ),
@@ -167,18 +159,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   decoration: BoxDecoration(
                     color: primary.withValues(alpha: isSaveEnabled ? 1 : 0.6),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: shadowLight,
-                        blurRadius: 14,
-                        offset: const Offset(-6, -6),
-                      ),
-                      BoxShadow(
-                        color: shadowDark,
-                        blurRadius: 14,
-                        offset: const Offset(6, 6),
-                      ),
-                    ],
                   ),
                   child: isUpdating
                       ? SizedBox(
@@ -233,8 +213,6 @@ class _ProfileTextField extends StatelessWidget {
     required this.hintText,
     required this.textColor,
     required this.placeholderColor,
-    required this.shadowLight,
-    required this.shadowDark,
     required this.isDark,
     this.readOnly = false,
     this.maxLines = 1,
@@ -244,8 +222,6 @@ class _ProfileTextField extends StatelessWidget {
   final String hintText;
   final Color textColor;
   final Color placeholderColor;
-  final Color shadowLight;
-  final Color shadowDark;
   final bool isDark;
   final bool readOnly;
   final int maxLines;
@@ -257,18 +233,6 @@ class _ProfileTextField extends StatelessWidget {
       decoration: BoxDecoration(
         color: insetColor,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: shadowDark,
-            blurRadius: 12,
-            offset: const Offset(6, 6),
-          ),
-          BoxShadow(
-            color: shadowLight,
-            blurRadius: 12,
-            offset: const Offset(-6, -6),
-          ),
-        ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: TextField(

@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
-import '../../../../core/widgets/neumorphic_button.dart';
-import '../../../../core/widgets/neumorphic_container.dart';
 import '../../../auth/data/providers/auth_providers.dart';
 import '../../../feed/domain/models/post.dart';
 import '../providers/comment_notifier.dart';
@@ -119,9 +117,11 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: NeumorphicContainer(
-                          state: NeumorphicState.inset,
-                          borderRadius: 16,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: TextField(
                             controller: _controller,
@@ -140,13 +140,12 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      NeumorphicButton(
+                      const SizedBox(width: 8),
+                      IconButton(
                         onPressed: canSubmit ? _submit : null,
-                        padding: const EdgeInsets.all(12),
-                        child: Icon(
+                        icon: Icon(
                           Icons.send_rounded,
-                          size: 18,
+                          size: 20,
                           color: canSubmit ? cs.primary : cs.onSurfaceVariant,
                         ),
                       ),
@@ -179,9 +178,8 @@ class _CommentsSheetState extends ConsumerState<CommentsSheet> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                NeumorphicButton(
+                TextButton(
                   onPressed: () => _notifier.loadComments(widget.post.id),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Text(
                     'Retry',
                     style: AppTextStyles.label.copyWith(color: cs.primary),

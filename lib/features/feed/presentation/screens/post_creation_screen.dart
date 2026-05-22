@@ -4,14 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
-import '../../../../core/widgets/neumorphic_button.dart';
-import '../../../../core/widgets/neumorphic_container.dart';
 import '../providers/feed_notifier.dart';
 import '../widgets/image_picker_field.dart';
 
-/// Post creation screen — design spec section 9.
-///
-/// Inset neumorphic image zone, caption field, primary full-width "Post" button.
+/// Post creation screen — image picker, caption field, full-width "Post" button.
 class PostCreationScreen extends ConsumerStatefulWidget {
   const PostCreationScreen({super.key});
 
@@ -68,9 +64,11 @@ class _PostCreationScreenState extends ConsumerState<PostCreationScreen> {
             ),
             const SizedBox(height: 20),
 
-            NeumorphicContainer(
-              state: NeumorphicState.inset,
-              borderRadius: 12,
+            Container(
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: TextField(
                 controller: _captionCtrl,
                 maxLines: 4,
@@ -140,12 +138,8 @@ class _PostButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return NeumorphicButton(
-      borderRadius: 12,
-      padding: EdgeInsets.zero,
-      width: double.infinity,
-      height: 52,
-      onPressed: onTap,
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
         width: double.infinity,
         height: 52,

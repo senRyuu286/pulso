@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
-import '../../../../core/widgets/neumorphic_container.dart';
 import '../providers/feed_notifier.dart';
 import '../widgets/post_card.dart';
 
@@ -132,17 +131,19 @@ class _SkeletonCardState extends State<_SkeletonCard>
               ),
             );
 
-        return NeumorphicContainer(
-          state: NeumorphicState.raised,
-          borderRadius: 20,
+        return Container(
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  block(40, 40, r: 999),
+                  block(40, 40, r: 14),
                   const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

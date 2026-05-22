@@ -25,8 +25,6 @@ class AuthTextField extends StatelessWidget {
     final surface = isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL;
     final textPlaceholder =
         isDark ? AppColors.textPlaceholderD : AppColors.textPlaceholderL;
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,20 +35,6 @@ class AuthTextField extends StatelessWidget {
             decoration: BoxDecoration(
               color: surface,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: shadowLight.withValues(alpha: 0.9),
-                  offset: const Offset(-4, -4),
-                  blurRadius: 8,
-                  blurStyle: BlurStyle.inner,
-                ),
-                BoxShadow(
-                  color: shadowDark.withValues(alpha: 0.9),
-                  offset: const Offset(4, 4),
-                  blurRadius: 8,
-                  blurStyle: BlurStyle.inner,
-                ),
-              ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),

@@ -20,31 +20,10 @@ class ProfileAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
 
     return Stack(
       alignment: Alignment.center,
       children: [
-        Container(
-          width: size + 8,
-          height: size + 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: shadowLight,
-                blurRadius: 14,
-                offset: const Offset(-6, -6),
-              ),
-              BoxShadow(
-                color: shadowDark,
-                blurRadius: 14,
-                offset: const Offset(6, 6),
-              ),
-            ],
-          ),
-        ),
         SizedBox(
           width: size,
           height: size,

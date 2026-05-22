@@ -9,6 +9,7 @@ abstract final class AppRoutes {
   static const String editProfile = '/profile/edit';
   static const String userProfile = '/user/:userId';
   static const String postDetail = '/post/:postId';
+  static const String settings = '/settings';
 
   static String profileFor(String userId) => '/user/$userId';
 

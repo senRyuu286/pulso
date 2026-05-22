@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
-import '../../../../core/widgets/neumorphic_container.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../domain/models/user_search_result.dart';
 import '../providers/search_notifier.dart';
 
@@ -89,9 +88,11 @@ class _SearchBar extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: NeumorphicContainer(
-        state: NeumorphicState.inset,
-        borderRadius: 16,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: TextField(
           controller: controller,
@@ -151,7 +152,12 @@ class _UserRow extends StatelessWidget {
 
     return ListTile(
       onTap: () => context.push(AppRoutes.profileFor(result.id)),
-      leading: _SearchAvatar(avatarUrl: result.avatarUrl, username: result.username),
+      leading: AppAvatar(
+        size: 40,
+        avatarUrl: result.avatarUrl,
+        username: result.username,
+        showBorder: false,
+      ),
       title: Text(
         '@${result.username}',
         style: AppTextStyles.label.copyWith(color: cs.onSurface),
@@ -162,34 +168,6 @@ class _UserRow extends StatelessWidget {
   }
 }
 
-class _SearchAvatar extends StatelessWidget {
-  const _SearchAvatar({required this.avatarUrl, required this.username});
-
-  final String? avatarUrl;
-  final String username;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final initials =
-        username.isNotEmpty ? username[0].toUpperCase() : '?';
-
-    final fallback = CircleAvatar(
-      backgroundColor: cs.primaryContainer,
-      child: Text(initials,
-          style: AppTextStyles.label.copyWith(color: cs.onPrimaryContainer)),
-    );
-
-    if (avatarUrl == null || avatarUrl!.isEmpty) return fallback;
-
-    return CircleAvatar(
-      backgroundColor: cs.surfaceContainerHighest,
-      backgroundImage: CachedNetworkImageProvider(avatarUrl!),
-      onBackgroundImageError: (_, _) {},
-      child: null,
-    );
-  }
-}
 
 class _EmptyPrompt extends StatelessWidget {
   const _EmptyPrompt({required this.cs});

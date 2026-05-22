@@ -11,7 +11,7 @@ import '../../../feed/domain/models/post.dart';
 import '../../data/providers/profile_providers.dart';
 import '../../domain/models/profile.dart';
 import '../providers/follow_notifier.dart';
-import '../widgets/profile_avatar.dart';
+import '../../../../core/widgets/app_avatar.dart';
 
 final _userPostsProvider = FutureProvider.family<List<Post>, String>(
   (ref, userId) => ref.watch(feedRepositoryProvider).fetchUserPosts(userId),
@@ -47,8 +47,6 @@ class _ViewUserProfileScreenState
         isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL;
     final surfaceRaised =
         isDark ? AppColors.surfaceRaisedD : AppColors.surfaceRaisedL;
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
 
     final profileAsync = ref.watch(fetchProfileProvider(widget.userId));
     final postsAsync = ref.watch(_userPostsProvider(widget.userId));
@@ -157,9 +155,10 @@ class _ViewUserProfileScreenState
                         ),
                         const SizedBox(height: 24),
                         Center(
-                          child: ProfileAvatar(
-                            avatarUrl: profile.avatarUrl,
+                          child: AppAvatar(
                             size: 120,
+                            avatarUrl: profile.avatarUrl,
+                            username: profile.username,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -181,11 +180,8 @@ class _ViewUserProfileScreenState
                         const SizedBox(height: 24),
                         _StatsRow(
                           profile: displayedProfile,
-                          surfaceInset: surfaceInset,
                           textPrimary: textPrimary,
                           textSecondary: textSecondary,
-                          shadowLight: shadowLight,
-                          shadowDark: shadowDark,
                         ),
                         const SizedBox(height: 20),
                         if (currentUserId != widget.userId)
@@ -193,8 +189,6 @@ class _ViewUserProfileScreenState
                             followState: followState,
                             surfaceRaised: surfaceRaised,
                             surfaceInset: surfaceInset,
-                            shadowLight: shadowLight,
-                            shadowDark: shadowDark,
                             textSecondary: textSecondary,
                             primary: primary,
                             onTap: followState is FollowLoaded
@@ -297,8 +291,6 @@ class _FollowButton extends StatelessWidget {
     required this.followState,
     required this.surfaceRaised,
     required this.surfaceInset,
-    required this.shadowLight,
-    required this.shadowDark,
     required this.textSecondary,
     required this.primary,
     required this.onTap,
@@ -307,8 +299,6 @@ class _FollowButton extends StatelessWidget {
   final FollowState followState;
   final Color surfaceRaised;
   final Color surfaceInset;
-  final Color shadowLight;
-  final Color shadowDark;
   final Color textSecondary;
   final Color primary;
   final VoidCallback? onTap;
@@ -330,18 +320,6 @@ class _FollowButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: shadowLight,
-              blurRadius: 14,
-              offset: const Offset(-6, -6),
-            ),
-            BoxShadow(
-              color: shadowDark,
-              blurRadius: 14,
-              offset: const Offset(6, 6),
-            ),
-          ],
         ),
         child: isLoading
             ? SizedBox(
@@ -399,19 +377,13 @@ class _PostGridTile extends StatelessWidget {
 class _StatsRow extends StatelessWidget {
   const _StatsRow({
     required this.profile,
-    required this.surfaceInset,
     required this.textPrimary,
     required this.textSecondary,
-    required this.shadowLight,
-    required this.shadowDark,
   });
 
   final Profile profile;
-  final Color surfaceInset;
   final Color textPrimary;
   final Color textSecondary;
-  final Color shadowLight;
-  final Color shadowDark;
 
   @override
   Widget build(BuildContext context) {
@@ -421,11 +393,8 @@ class _StatsRow extends StatelessWidget {
           child: _StatTile(
             label: 'Posts',
             value: profile.postCount,
-            surfaceInset: surfaceInset,
             textPrimary: textPrimary,
             textSecondary: textSecondary,
-            shadowLight: shadowLight,
-            shadowDark: shadowDark,
           ),
         ),
         const SizedBox(width: 12),
@@ -433,11 +402,8 @@ class _StatsRow extends StatelessWidget {
           child: _StatTile(
             label: 'Followers',
             value: profile.followerCount,
-            surfaceInset: surfaceInset,
             textPrimary: textPrimary,
             textSecondary: textSecondary,
-            shadowLight: shadowLight,
-            shadowDark: shadowDark,
           ),
         ),
         const SizedBox(width: 12),
@@ -445,11 +411,8 @@ class _StatsRow extends StatelessWidget {
           child: _StatTile(
             label: 'Following',
             value: profile.followingCount,
-            surfaceInset: surfaceInset,
             textPrimary: textPrimary,
             textSecondary: textSecondary,
-            shadowLight: shadowLight,
-            shadowDark: shadowDark,
           ),
         ),
       ],
@@ -461,53 +424,28 @@ class _StatTile extends StatelessWidget {
   const _StatTile({
     required this.label,
     required this.value,
-    required this.surfaceInset,
     required this.textPrimary,
     required this.textSecondary,
-    required this.shadowLight,
-    required this.shadowDark,
   });
 
   final String label;
   final int value;
-  final Color surfaceInset;
   final Color textPrimary;
   final Color textSecondary;
-  final Color shadowLight;
-  final Color shadowDark;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: surfaceInset,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: shadowDark,
-            blurRadius: 10,
-            offset: const Offset(6, 6),
-          ),
-          BoxShadow(
-            color: shadowLight,
-            blurRadius: 10,
-            offset: const Offset(-6, -6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            value.toString(),
-            style: AppTextStyles.title.copyWith(color: textPrimary),
-          ),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(color: textSecondary),
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        Text(
+          value.toString(),
+          style: AppTextStyles.title.copyWith(color: textPrimary),
+        ),
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(color: textSecondary),
+        ),
+      ],
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../domain/models/app_notification.dart';
 import '../providers/notification_notifier.dart';
 
@@ -135,9 +136,11 @@ class _NotificationTile extends StatelessWidget {
             const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
           children: [
-            _ActorAvatar(
+            AppAvatar(
+              size: 40,
               avatarUrl: notification.actorAvatarUrl,
-              username: notification.actorUsername ?? '',
+              username: notification.actorUsername,
+              showBorder: false,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -211,33 +214,3 @@ class _NotificationTile extends StatelessWidget {
   }
 }
 
-class _ActorAvatar extends StatelessWidget {
-  const _ActorAvatar({required this.avatarUrl, required this.username});
-
-  final String? avatarUrl;
-  final String username;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final initials = username.isNotEmpty ? username[0].toUpperCase() : '?';
-
-    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
-      return CircleAvatar(
-        radius: 20,
-        backgroundColor: cs.surfaceContainerHighest,
-        backgroundImage: CachedNetworkImageProvider(avatarUrl!),
-        onBackgroundImageError: (_, _) {},
-      );
-    }
-
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: cs.primaryContainer,
-      child: Text(
-        initials,
-        style: AppTextStyles.label.copyWith(color: cs.onPrimaryContainer),
-      ),
-    );
-  }
-}

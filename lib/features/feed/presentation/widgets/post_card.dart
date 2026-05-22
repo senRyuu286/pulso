@@ -7,17 +7,14 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
-import '../../../../core/widgets/neumorphic_container.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../../comments/presentation/widgets/comments_sheet.dart';
 import '../../../comments/presentation/providers/comment_notifier.dart';
 import '../../domain/models/post.dart';
 import 'like_button.dart';
 import 'repost_button.dart';
 
-/// Post card — design spec section 5.1.
-///
-/// surface-raised container, radius-md (20dp), neumorphic raised shadow.
-/// 16:9 image with radius-sm (12dp) corners.
+/// Post card — flat surface container, radius 20dp.
 /// Entry animation: fade + slide up over 400ms, staggered by [index] × 60ms.
 class PostCard extends StatefulWidget {
   const PostCard({super.key, required this.post, required this.index});
@@ -66,15 +63,18 @@ class _PostCardState extends State<PostCard>
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return FadeTransition(
       opacity: _opacity,
       child: SlideTransition(
         position: _slide,
-        child: NeumorphicContainer(
-          state: NeumorphicState.raised,
-          borderRadius: 20,
+        child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -131,7 +131,7 @@ class _CardHeader extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _Avatar(size: 40, avatarUrl: post.avatarUrl, username: post.username),
+              AppAvatar(size: 40, avatarUrl: post.avatarUrl, username: post.username),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,93 +165,6 @@ class _CardHeader extends StatelessWidget {
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
     return '${(diff.inDays / 7).floor()}w ago';
-  }
-}
-
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.size, this.avatarUrl, this.username});
-
-  final double size;
-  final String? avatarUrl;
-  final String? username;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final pulso = context.pulso;
-
-    final initials =
-        username?.isNotEmpty == true ? username![0].toUpperCase() : '?';
-
-    final fallback = _InitialsAvatar(
-      initials: initials,
-      primaryMuted: pulso.primaryMuted,
-      amber: pulso.amber,
-      primary: cs.primary,
-      size: size,
-    );
-
-    final avatar = avatarUrl != null
-        ? CachedNetworkImage(
-            imageUrl: avatarUrl!,
-            fit: BoxFit.cover,
-            placeholder: (_, _) => fallback,
-            errorWidget: (_, _, _) => fallback,
-          )
-        : fallback;
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: cs.surface, width: 2),
-      ),
-      child: ClipOval(child: avatar),
-    );
-  }
-}
-
-class _InitialsAvatar extends StatelessWidget {
-  const _InitialsAvatar({
-    required this.initials,
-    required this.primaryMuted,
-    required this.amber,
-    required this.primary,
-    required this.size,
-  });
-
-  final String initials;
-  final Color primaryMuted;
-  final Color amber;
-  final Color primary;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [primaryMuted, amber],
-        ),
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          initials,
-          style: AppTextStyles.label.copyWith(
-            color: primary,
-            fontSize: size * 0.4,
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -448,9 +361,8 @@ class _ImageError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final pulso = context.pulso;
     return Container(
-      color: pulso.surfaceInset,
+      color: cs.surfaceContainerHighest,
       child: Center(
         child: Icon(Icons.broken_image_outlined, color: cs.onSurfaceVariant, size: 32),
       ),

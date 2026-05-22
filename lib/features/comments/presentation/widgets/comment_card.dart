@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../domain/models/comment.dart';
 
 /// Comment card widget — displays a single comment.
@@ -30,30 +30,11 @@ class CommentCard extends StatelessWidget {
           // Avatar
           GestureDetector(
             onTap: () => context.push(AppRoutes.profileFor(comment.userId)),
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: cs.surface, width: 1.5),
-              ),
-              child: comment.avatarUrl != null
-                  ? ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: comment.avatarUrl!,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  : Center(
-                      child: Text(
-                        (comment.username?.isNotEmpty == true
-                                ? comment.username![0]
-                                : '?')
-                            .toUpperCase(),
-                        style: AppTextStyles.label
-                            .copyWith(fontSize: 12, color: cs.primary),
-                      ),
-                    ),
+            child: AppAvatar(
+              size: 32,
+              avatarUrl: comment.avatarUrl,
+              username: comment.username,
+              showBorder: false,
             ),
           ),
           const SizedBox(width: 12),

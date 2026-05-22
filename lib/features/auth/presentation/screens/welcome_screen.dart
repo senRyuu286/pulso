@@ -215,66 +215,6 @@ class _OutlinedButtonState extends State<_OutlinedButton> {
     final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
     final surface = isDark ? AppColors.surfaceD : AppColors.surfaceL;
 
-    final raisedShadows = isDark
-        ? [
-            const BoxShadow(
-              color: Color(0xFF2E231B),
-              offset: Offset(-5, -5),
-              blurRadius: 10,
-              spreadRadius: 0,
-            ),
-            const BoxShadow(
-              color: Color(0xFF0E0907),
-              offset: Offset(5, 5),
-              blurRadius: 10,
-              spreadRadius: 0,
-            ),
-          ]
-        : [
-            const BoxShadow(
-              color: Color(0xFFFFFFFF),
-              offset: Offset(-5, -5),
-              blurRadius: 12,
-              spreadRadius: 0,
-            ),
-            const BoxShadow(
-              color: Color(0xFFC8BDB4),
-              offset: Offset(5, 5),
-              blurRadius: 12,
-              spreadRadius: 0,
-            ),
-          ];
-
-    final insetShadows = isDark
-        ? [
-            const BoxShadow(
-              color: Color(0xFF2E231B),
-              offset: Offset(3, 3),
-              blurRadius: 6,
-              blurStyle: BlurStyle.inner,
-            ),
-            const BoxShadow(
-              color: Color(0xFF0E0907),
-              offset: Offset(-3, -3),
-              blurRadius: 6,
-              blurStyle: BlurStyle.inner,
-            ),
-          ]
-        : [
-            const BoxShadow(
-              color: Color(0xFFFFFFFF),
-              offset: Offset(3, 3),
-              blurRadius: 6,
-              blurStyle: BlurStyle.inner,
-            ),
-            const BoxShadow(
-              color: Color(0xFFC8BDB4),
-              offset: Offset(-3, -3),
-              blurRadius: 6,
-              blurStyle: BlurStyle.inner,
-            ),
-          ];
-
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapCancel: () => setState(() => _isPressed = false),
@@ -286,16 +226,14 @@ class _OutlinedButtonState extends State<_OutlinedButton> {
         scale: _isPressed ? 0.96 : 1.0,
         duration: Duration(milliseconds: _isPressed ? 80 : 150),
         curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: _isPressed ? 80 : 150),
-          curve: Curves.easeOut,
+        child: Container(
           height: 52,
           width: double.infinity,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: surface,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: _isPressed ? insetShadows : raisedShadows,
+            border: Border.all(color: primary, width: 1.5),
           ),
           child: Text(
             widget.label,

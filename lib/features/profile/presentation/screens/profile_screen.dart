@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,7 +14,6 @@ import '../../../feed/domain/models/post.dart';
 import '../../domain/models/profile.dart';
 import '../providers/profile_notifier.dart';
 import '../widgets/avatar_crop_preview.dart';
-import '../widgets/profile_avatar.dart';
 
 final _userPostsProvider = FutureProvider.family<List<Post>, String>(
   (ref, userId) => ref.watch(feedRepositoryProvider).fetchUserPosts(userId),
@@ -26,27 +26,34 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   bool _requestedLoad = false;
   String? _lastUserId;
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateChangesProvider);
     final profileState = ref.watch(profileProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
 
-    final surfaceRaised =
-        isDark ? AppColors.surfaceRaisedD : AppColors.surfaceRaisedL;
-    final surfaceInset =
-        isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL;
-    final textPrimary =
-        isDark ? AppColors.textPrimaryD : AppColors.textPrimaryL;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
+    final textPrimary = isDark ? AppColors.textPrimaryD : AppColors.textPrimaryL;
+    final textSecondary = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
     final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
 
     final currentUserId = authState.asData?.value?.id;
 
@@ -58,18 +65,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (currentUserId != null && !_requestedLoad) {
       _requestedLoad = true;
       Future.microtask(() {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         ref.read(profileProvider.notifier).loadProfile(currentUserId);
       });
     }
 
     Widget body;
     if (profileState is ProfileLoading || profileState is ProfileInitial) {
-      body = Center(
-        child: CircularProgressIndicator(color: primary),
-      );
+      body = Center(child: CircularProgressIndicator(color: primary));
     } else if (profileState is ProfileError) {
       body = Center(
         child: Column(
@@ -82,54 +85,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             TextButton(
               onPressed: currentUserId == null
                   ? null
-                  : () {
-                        ref
-                          .read(profileProvider.notifier)
-                          .loadProfile(currentUserId);
-                    },
-              child: Text(
-                'Retry',
-                style: AppTextStyles.label.copyWith(color: primary),
-              ),
+                  : () => ref.read(profileProvider.notifier).loadProfile(currentUserId),
+              child: Text('Retry', style: AppTextStyles.label.copyWith(color: primary)),
             ),
           ],
         ),
       );
-    } else if (profileState is ProfileLoaded ||
-        profileState is ProfileUpdating) {
+    } else if (profileState is ProfileLoaded || profileState is ProfileUpdating) {
       final profile = profileState is ProfileLoaded
           ? profileState.profile
           : (profileState as ProfileUpdating).profile;
 
-      final postsAsync = ref.watch(_userPostsProvider(profile.id));
-
-      body = CustomScrollView(
-        slivers: [
+      body = NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverToBoxAdapter(
-            child: _ProfileBody(
+            child: _ProfileHeader(
               profile: profile,
               isDark: isDark,
               textPrimary: textPrimary,
               textSecondary: textSecondary,
-              surfaceInset: surfaceInset,
-              surfaceRaised: surfaceRaised,
-              shadowLight: shadowLight,
-              shadowDark: shadowDark,
               primary: primary,
               onEditAvatar: currentUserId == null
                   ? null
                   : () => _pickAndUploadAvatar(context, currentUserId),
-              onSignOut: () =>
-                  ref.read(authNotifierProvider.notifier).signOut(),
             ),
           ),
-          _PostsSliver(
-            postsAsync: postsAsync,
-            textSecondary: textSecondary,
-            primary: primary,
-            isDark: isDark,
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _TabBarDelegate(tabController: _tabController, cs: cs),
           ),
         ],
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _PostsTab(userId: profile.id),
+            _RepostsTab(userId: profile.id),
+          ],
+        ),
       );
     } else {
       body = const SizedBox.shrink();
@@ -146,21 +138,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       source: ImageSource.gallery,
       imageQuality: 85,
     );
-    if (xFile == null) {
-      return;
-    }
+    if (xFile == null) return;
     final bytes = await xFile.readAsBytes();
-    if (!context.mounted) {
-      return;
-    }
+    if (!context.mounted) return;
     final theme = Theme.of(context);
     final sheetBg = (theme.brightness == Brightness.dark
             ? AppColors.surfaceD
             : AppColors.surfaceL)
         .withValues(alpha: 0);
-    if (!context.mounted) {
-      return;
-    }
+    if (!context.mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -177,145 +163,71 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   fileExtension: extension,
                 );
           },
-          onCancel: () {
-            Navigator.of(context).pop();
-          },
+          onCancel: () => Navigator.of(context).pop(),
         );
       },
     );
   }
 }
 
-class _PostsSliver extends StatelessWidget {
-  const _PostsSliver({
-    required this.postsAsync,
-    required this.textSecondary,
-    required this.primary,
-    required this.isDark,
-  });
+// ─── Tab Bar Delegate ─────────────────────────────────────────────────────────
 
-  final AsyncValue<List<Post>> postsAsync;
-  final Color textSecondary;
-  final Color primary;
-  final bool isDark;
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  _TabBarDelegate({required this.tabController, required this.cs});
+
+  final TabController tabController;
+  final ColorScheme cs;
+
+  static const double _height = 46;
 
   @override
-  Widget build(BuildContext context) {
-    return postsAsync.when(
-      loading: () => SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Center(
-            child: CircularProgressIndicator(color: primary),
-          ),
-        ),
-      ),
-      error: (error, stack) => SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-          child: Text(
-            'Unable to load posts.',
-            style: AppTextStyles.body.copyWith(color: primary),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-      data: (posts) {
-        if (posts.isEmpty) {
-          return SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-              child: Text(
-                'No posts yet.',
-                style: AppTextStyles.body.copyWith(color: textSecondary),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        }
-        return SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          sliver: SliverGrid(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _PostGridTile(
-                post: posts[index],
-                isDark: isDark,
-              ),
-              childCount: posts.length,
-            ),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _PostGridTile extends StatelessWidget {
-  const _PostGridTile({
-    required this.post,
-    required this.isDark,
-  });
-
-  final Post post;
-  final bool isDark;
+  double get minExtent => _height;
+  @override
+  double get maxExtent => _height;
 
   @override
-  Widget build(BuildContext context) {
-    final surfaceInset =
-        isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
+  bool shouldRebuild(_TabBarDelegate oldDelegate) =>
+      oldDelegate.tabController != tabController;
 
-    return GestureDetector(
-      onTap: () => context.push(AppRoutes.postDetailFor(post.id), extra: post),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          color: surfaceInset,
-          child: Image.network(
-            post.imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Center(
-              child: Icon(Icons.broken_image_rounded, color: textSecondary),
-            ),
-          ),
-        ),
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: cs.surface,
+      child: TabBar(
+        controller: tabController,
+        labelColor: cs.onSurface,
+        unselectedLabelColor: cs.onSurfaceVariant,
+        indicatorColor: cs.onSurface,
+        indicatorWeight: 1.5,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: cs.outline.withValues(alpha: 0.3),
+        tabs: const [
+          Tab(icon: Icon(Icons.grid_on_rounded, size: 22)),
+          Tab(icon: Icon(Icons.repeat_rounded, size: 22)),
+        ],
       ),
     );
   }
 }
 
-class _ProfileBody extends StatelessWidget {
-  const _ProfileBody({
+// ─── Profile Header ───────────────────────────────────────────────────────────
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({
     required this.profile,
     required this.isDark,
     required this.textPrimary,
     required this.textSecondary,
-    required this.surfaceInset,
-    required this.surfaceRaised,
-    required this.shadowLight,
-    required this.shadowDark,
     required this.primary,
     required this.onEditAvatar,
-    required this.onSignOut,
   });
 
   final Profile profile;
   final bool isDark;
   final Color textPrimary;
   final Color textSecondary;
-  final Color surfaceInset;
-  final Color surfaceRaised;
-  final Color shadowLight;
-  final Color shadowDark;
   final Color primary;
   final VoidCallback? onEditAvatar;
-  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -324,125 +236,331 @@ class _ProfileBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 32),
-          Center(
-            child: GestureDetector(
-              onTap: onEditAvatar,
-              child: ProfileAvatar(
-                avatarUrl: profile.avatarUrl,
-                size: 120,
-                showEditButton: onEditAvatar != null,
-                onEditTap: onEditAvatar,
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // ── Circular avatar + black "+" badge ────────────────────
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  GestureDetector(
+                    onTap: onEditAvatar,
+                    child: _CircularAvatar(
+                      size: 90,
+                      avatarUrl: profile.avatarUrl,
+                      username: profile.username,
+                    ),
+                  ),
+                  if (onEditAvatar != null)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: onEditAvatar,
+                        child: Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDark ? AppColors.surfaceD : AppColors.surfaceL,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(Icons.add, size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ),
+              const SizedBox(width: 20),
+              // ── Info column: display name + username + stats ─────────
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      profile.displayName?.isNotEmpty == true
+                          ? profile.displayName!
+                          : profile.username.isNotEmpty
+                              ? profile.username
+                              : 'user',
+                      style: AppTextStyles.title.copyWith(color: textPrimary),
+                    ),
+                    Text(
+                      profile.username.isNotEmpty ? profile.username : 'user',
+                      style: AppTextStyles.body.copyWith(color: textSecondary),
+                    ),
+                    const SizedBox(height: 8),
+                    _StatsRow(
+                      profile: profile,
+                      textPrimary: textPrimary,
+                      textSecondary: textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          if (profile.displayName != null && profile.displayName!.isNotEmpty)
-            Text(
-              profile.displayName!,
-              style: AppTextStyles.title.copyWith(color: textPrimary),
-              textAlign: TextAlign.center,
-            ),
-          Text(
-            '@${profile.username}',
-            style: AppTextStyles.headline.copyWith(color: textPrimary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          if (profile.bio != null)
-            Text(
-              profile.bio!,
-              style: AppTextStyles.body.copyWith(color: textSecondary),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-            ),
-          const SizedBox(height: 24),
-          _StatsRow(
-            profile: profile,
-            surfaceInset: surfaceInset,
-            textPrimary: textPrimary,
-            textSecondary: textSecondary,
-            shadowLight: shadowLight,
-            shadowDark: shadowDark,
-          ),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: () => context.push(AppRoutes.editProfile, extra: profile),
-            child: Container(
-              height: 52,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: surfaceRaised,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: shadowLight,
-                    blurRadius: 14,
-                    offset: const Offset(-6, -6),
-                  ),
-                  BoxShadow(
-                    color: shadowDark,
-                    blurRadius: 14,
-                    offset: const Offset(6, 6),
-                  ),
-                ],
-              ),
-              child: Text(
-                'Edit Profile',
-                style: AppTextStyles.title.copyWith(color: primary),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: onSignOut,
-            child: Container(
-              height: 52,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: surfaceInset,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: shadowLight,
-                    blurRadius: 14,
-                    offset: const Offset(-6, -6),
-                  ),
-                  BoxShadow(
-                    color: shadowDark,
-                    blurRadius: 14,
-                    offset: const Offset(6, 6),
-                  ),
-                ],
-              ),
-              child: Text(
-                'Sign Out',
-                style: AppTextStyles.title.copyWith(color: textSecondary),
-              ),
-            ),
-          ),
+          _ActionButtonRow(profile: profile),
+          const SizedBox(height: 8),
         ],
       ),
     );
   }
 }
 
+// ─── Circular Avatar ─────────────────────────────────────────────────────────
+
+class _CircularAvatar extends StatelessWidget {
+  const _CircularAvatar({
+    required this.size,
+    this.avatarUrl,
+    this.username,
+  });
+
+  final double size;
+  final String? avatarUrl;
+  final String? username;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.surfaceInsetD : AppColors.surfaceInsetL;
+    final fg = isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
+    final initial = username?.isNotEmpty == true ? username![0].toUpperCase() : null;
+
+    final Widget fallback = Container(
+      width: size,
+      height: size,
+      color: bg,
+      child: Center(
+        child: initial != null
+            ? Text(
+                initial,
+                style: AppTextStyles.label.copyWith(
+                  color: fg,
+                  fontSize: size * 0.38,
+                  height: 1,
+                ),
+              )
+            : Icon(Icons.person_rounded, size: size * 0.55, color: fg),
+      ),
+    );
+
+    final Widget content = (avatarUrl != null && avatarUrl!.isNotEmpty)
+        ? CachedNetworkImage(
+            imageUrl: avatarUrl!,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            placeholder: (_, _) => fallback,
+            errorWidget: (_, _, _) => fallback,
+          )
+        : fallback;
+
+    return ClipOval(
+      child: SizedBox(width: size, height: size, child: content),
+    );
+  }
+}
+
+// ─── Action Button Row ────────────────────────────────────────────────────────
+
+class _ActionButtonRow extends ConsumerWidget {
+  const _ActionButtonRow({required this.profile});
+
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionButton(
+            label: 'Edit profile',
+            onPressed: () => context.push(AppRoutes.editProfile, extra: profile),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _ActionButton(
+            label: 'Sign out',
+            onPressed: () => ref.read(authNotifierProvider.notifier).signOut(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.label.copyWith(color: cs.onSurface, fontSize: 13),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Posts Tab ────────────────────────────────────────────────────────────────
+
+class _PostsTab extends ConsumerWidget {
+  const _PostsTab({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final postsAsync = ref.watch(_userPostsProvider(userId));
+
+    return postsAsync.when(
+      loading: () => Center(child: CircularProgressIndicator(color: cs.primary)),
+      error: (_, _) => Center(
+        child: Text(
+          'Unable to load posts.',
+          style: AppTextStyles.body.copyWith(color: cs.onSurfaceVariant),
+        ),
+      ),
+      data: (posts) {
+        if (posts.isEmpty) {
+          return Center(
+            child: Text(
+              'No posts yet.',
+              style: AppTextStyles.body.copyWith(color: cs.onSurfaceVariant),
+            ),
+          );
+        }
+        return GridView.builder(
+          padding: EdgeInsets.zero,
+          physics: const AlwaysScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 1,
+            mainAxisSpacing: 1,
+          ),
+          itemCount: posts.length,
+          itemBuilder: (_, index) => _PostGridTile(post: posts[index]),
+        );
+      },
+    );
+  }
+}
+
+// ─── Reposts Tab ──────────────────────────────────────────────────────────────
+
+class _RepostsTab extends ConsumerWidget {
+  const _RepostsTab({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final repostsAsync = ref.watch(repostsByUserProvider(userId));
+
+    return repostsAsync.when(
+      loading: () => Center(child: CircularProgressIndicator(color: cs.primary)),
+      error: (_, _) => Center(
+        child: Text(
+          'Unable to load reposts.',
+          style: AppTextStyles.body.copyWith(color: cs.onSurfaceVariant),
+        ),
+      ),
+      data: (posts) {
+        if (posts.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.repeat_rounded, size: 48, color: cs.onSurfaceVariant),
+                const SizedBox(height: 12),
+                Text(
+                  'No reposts yet.',
+                  style: AppTextStyles.body.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          );
+        }
+        return GridView.builder(
+          padding: EdgeInsets.zero,
+          physics: const AlwaysScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 1,
+            mainAxisSpacing: 1,
+          ),
+          itemCount: posts.length,
+          itemBuilder: (_, index) => _PostGridTile(post: posts[index]),
+        );
+      },
+    );
+  }
+}
+
+// ─── Post Grid Tile ───────────────────────────────────────────────────────────
+
+class _PostGridTile extends StatelessWidget {
+  const _PostGridTile({required this.post});
+
+  final Post post;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push(AppRoutes.postDetailFor(post.id), extra: post),
+      child: CachedNetworkImage(
+        imageUrl: post.imageUrl,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => Container(color: cs.surfaceContainerHighest),
+        errorWidget: (_, _, _) => Container(
+          color: cs.surfaceContainerHighest,
+          child: Icon(Icons.broken_image_rounded, color: cs.onSurfaceVariant),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Stats Row ────────────────────────────────────────────────────────────────
+
 class _StatsRow extends StatelessWidget {
   const _StatsRow({
     required this.profile,
-    required this.surfaceInset,
     required this.textPrimary,
     required this.textSecondary,
-    required this.shadowLight,
-    required this.shadowDark,
   });
 
   final Profile profile;
-  final Color surfaceInset;
   final Color textPrimary;
   final Color textSecondary;
-  final Color shadowLight;
-  final Color shadowDark;
 
   @override
   Widget build(BuildContext context) {
@@ -450,37 +568,28 @@ class _StatsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatTile(
-            label: 'Posts',
+            label: profile.postCount == 1 ? 'post' : 'posts',
             value: profile.postCount,
-            surfaceInset: surfaceInset,
             textPrimary: textPrimary,
             textSecondary: textSecondary,
-            shadowLight: shadowLight,
-            shadowDark: shadowDark,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _StatTile(
-            label: 'Followers',
+            label: 'followers',
             value: profile.followerCount,
-            surfaceInset: surfaceInset,
             textPrimary: textPrimary,
             textSecondary: textSecondary,
-            shadowLight: shadowLight,
-            shadowDark: shadowDark,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _StatTile(
-            label: 'Following',
+            label: 'following',
             value: profile.followingCount,
-            surfaceInset: surfaceInset,
             textPrimary: textPrimary,
             textSecondary: textSecondary,
-            shadowLight: shadowLight,
-            shadowDark: shadowDark,
           ),
         ),
       ],
@@ -492,53 +601,28 @@ class _StatTile extends StatelessWidget {
   const _StatTile({
     required this.label,
     required this.value,
-    required this.surfaceInset,
     required this.textPrimary,
     required this.textSecondary,
-    required this.shadowLight,
-    required this.shadowDark,
   });
 
   final String label;
   final int value;
-  final Color surfaceInset;
   final Color textPrimary;
   final Color textSecondary;
-  final Color shadowLight;
-  final Color shadowDark;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: surfaceInset,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: shadowDark,
-            blurRadius: 10,
-            offset: const Offset(6, 6),
-          ),
-          BoxShadow(
-            color: shadowLight,
-            blurRadius: 10,
-            offset: const Offset(-6, -6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            value.toString(),
-            style: AppTextStyles.title.copyWith(color: textPrimary),
-          ),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(color: textSecondary),
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        Text(
+          value.toString(),
+          style: AppTextStyles.title.copyWith(color: textPrimary),
+        ),
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(color: textSecondary),
+        ),
+      ],
     );
   }
 }

@@ -21,4 +21,6 @@ abstract class FeedRepository {
   });
 
   Future<Post> fetchPostById(String postId);
+
+  Future<List<Post>> fetchRepostsByUser(String userId);
 }

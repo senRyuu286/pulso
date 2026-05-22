@@ -16,6 +16,7 @@ import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/profile/presentation/screens/view_user_profile_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
 import 'app_routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -90,6 +91,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => ViewUserProfileScreen(
           userId: state.pathParameters['userId']!,
         ),
+      ),
+
+      GoRoute(
+        path: AppRoutes.settings,
+        builder: (context, state) => const SettingsScreen(),
       ),
 
       // ── Post Detail ──────────────────────────────────────────────────────

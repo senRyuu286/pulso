@@ -227,6 +227,42 @@ class FeedRepositoryImpl implements FeedRepository {
     }
   }
 
+  @override
+  Future<List<Post>> fetchRepostsByUser(String userId) async {
+    try {
+      final currentUserId = client.auth.currentUser?.id ?? '';
+
+      final repostRows = await client
+          .from('reposts')
+          .select('post_id')
+          .eq('user_id', userId);
+
+      final postIds = (repostRows as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .map((r) => r['post_id'] as String)
+          .toList();
+
+      if (postIds.isEmpty) return [];
+
+      final data = await client
+          .from('posts')
+          .select(_postSelect)
+          .inFilter('id', postIds)
+          .order('created_at', ascending: false);
+
+      return (data as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .map((row) => Post.fromMap(row, currentUserId: currentUserId))
+          .toList();
+    } on SocketException {
+      throw const NetworkFeedException();
+    } on TimeoutException {
+      throw const NetworkFeedException();
+    } catch (error) {
+      throw UnknownFeedException(_messageFromError(error));
+    }
+  }
+
   Future<void> _fanOutNotifications({
     required String postId,
     required String actorId,

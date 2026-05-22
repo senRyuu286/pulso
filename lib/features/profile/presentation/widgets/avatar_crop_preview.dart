@@ -26,8 +26,6 @@ class _AvatarCropPreviewState extends State<AvatarCropPreview> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor = isDark ? AppColors.surfaceD : AppColors.surfaceL;
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
     final dividerColor = isDark ? AppColors.dividerD : AppColors.dividerL;
     final bottomInset =
       MediaQuery.of(context).padding.bottom + kBottomNavigationBarHeight;
@@ -38,18 +36,6 @@ class _AvatarCropPreviewState extends State<AvatarCropPreview> {
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(28),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: shadowLight,
-            blurRadius: 18,
-            offset: const Offset(-6, -6),
-          ),
-          BoxShadow(
-            color: shadowDark,
-            blurRadius: 18,
-            offset: const Offset(6, 6),
-          ),
-        ],
       ),
       padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + bottomInset),
       child: Column(
@@ -75,21 +61,8 @@ class _AvatarCropPreviewState extends State<AvatarCropPreview> {
           Container(
             width: 160,
             height: 160,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: surfaceColor,
-              boxShadow: [
-                BoxShadow(
-                  color: shadowLight,
-                  blurRadius: 14,
-                  offset: const Offset(-6, -6),
-                ),
-                BoxShadow(
-                  color: shadowDark,
-                  blurRadius: 14,
-                  offset: const Offset(6, 6),
-                ),
-              ],
             ),
             child: ClipOval(
               child: Image.memory(
@@ -121,18 +94,6 @@ class _AvatarCropPreviewState extends State<AvatarCropPreview> {
                     decoration: BoxDecoration(
                       color: surfaceColor,
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: shadowLight,
-                          blurRadius: 14,
-                          offset: const Offset(-6, -6),
-                        ),
-                        BoxShadow(
-                          color: shadowDark,
-                          blurRadius: 14,
-                          offset: const Offset(6, 6),
-                        ),
-                      ],
                     ),
                     child: Text(
                       'Retake',
@@ -156,18 +117,6 @@ class _AvatarCropPreviewState extends State<AvatarCropPreview> {
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.primaryD : AppColors.primaryL,
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: shadowLight,
-                          blurRadius: 14,
-                          offset: const Offset(-6, -6),
-                        ),
-                        BoxShadow(
-                          color: shadowDark,
-                          blurRadius: 14,
-                          offset: const Offset(6, 6),
-                        ),
-                      ],
                     ),
                     child: Text(
                       'Use Photo',

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/theme/pulso_theme_extension.dart';
 import '../../../../core/theme/theme_provider.dart';
 import '../../../notifications/presentation/providers/notification_notifier.dart';
 
@@ -32,7 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       extendBody: true,
       appBar: const _PulsoAppBar(),
       body: widget.child,
-      bottomNavigationBar: _NeumorphicNav(
+      bottomNavigationBar: _BottomNav(
         selectedIndex: selectedIndex,
         unreadNotificationCount: unreadCount,
         onTap: (i) {
@@ -100,13 +98,7 @@ class _PulsoAppBar extends StatelessWidget implements PreferredSizeWidget {
         children: [
           Text(
             'Pulso',
-            style: GoogleFonts.fraunces(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurface,
-              height: 1.0,
-            ),
+            style: AppTextStyles.headline.copyWith(color: cs.primary),
           ),
           const Spacer(),
           Consumer(
@@ -133,10 +125,10 @@ class _PulsoAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-// ─── Neumorphic Bottom Navigation Bar ────────────────────────────────────────
+// ─── Bottom Navigation Bar ───────────────────────────────────────────────────
 
-class _NeumorphicNav extends StatelessWidget {
-  const _NeumorphicNav({
+class _BottomNav extends StatelessWidget {
+  const _BottomNav({
     required this.selectedIndex,
     required this.unreadNotificationCount,
     required this.onTap,
@@ -148,47 +140,60 @@ class _NeumorphicNav extends StatelessWidget {
 
   static const _icons = [
     (outline: Icons.home_outlined, filled: Icons.home_rounded),
-    (outline: Icons.search_rounded, filled: Icons.search_rounded),
-    (outline: Icons.add_circle_outline, filled: Icons.add_circle_rounded),
-    (
-      outline: Icons.notifications_none_rounded,
-      filled: Icons.notifications_rounded
-    ),
+    (outline: Icons.explore_outlined, filled: Icons.explore_rounded),
+    (outline: Icons.add_rounded, filled: Icons.add_rounded),
+    (outline: Icons.notifications_none_rounded, filled: Icons.notifications_rounded),
     (outline: Icons.person_outline_rounded, filled: Icons.person_rounded),
   ];
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final pulso = context.pulso;
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        boxShadow: [
-          BoxShadow(
-            color: pulso.shadowLight,
-            offset: const Offset(-6, -6),
-            blurRadius: pulso.shadowBlur,
-          ),
-          BoxShadow(
-            color: pulso.shadowDark,
-            offset: const Offset(6, 6),
-            blurRadius: pulso.shadowBlur,
-          ),
-        ],
+        color: cs.surface,
+        border: Border(
+          top: BorderSide(color: cs.outline.withValues(alpha: 0.3), width: 0.5),
+        ),
       ),
       padding: EdgeInsets.only(bottom: bottomPad, top: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(_icons.length, (i) {
+          if (i == 2) {
+            return Semantics(
+              label: 'Create',
+              button: true,
+              child: GestureDetector(
+                onTap: () => onTap(i),
+                behavior: HitTestBehavior.opaque,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      height: 30,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: cs.primary,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: const Icon(Icons.add_rounded, size: 20, color: Colors.white),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+                ),
+              ),
+            );
+          }
+
           final isActive = i == selectedIndex;
           final icon = isActive ? _icons[i].filled : _icons[i].outline;
           final showBadge = i == 3 && unreadNotificationCount > 0;
 
           return Semantics(
-            label: ['Home', 'Search', 'Create', 'Notifications', 'Profile'][i],
+            label: ['Home', 'Search', '', 'Notifications', 'Profile'][i],
             button: true,
             child: GestureDetector(
               onTap: () => onTap(i),
@@ -212,8 +217,7 @@ class _NeumorphicNav extends StatelessWidget {
                             right: -6,
                             child: Container(
                               padding: const EdgeInsets.all(2),
-                              constraints: const BoxConstraints(
-                                  minWidth: 14, minHeight: 14),
+                              constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
                               decoration: BoxDecoration(
                                 color: cs.error,
                                 shape: BoxShape.circle,
@@ -236,11 +240,11 @@ class _NeumorphicNav extends StatelessWidget {
                     const SizedBox(height: 4),
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      width: isActive ? 8 : 0,
-                      height: isActive ? 8 : 0,
+                      height: 2,
+                      width: isActive ? 20.0 : 0.0,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isActive ? cs.primary : Colors.transparent,
+                        color: cs.primary,
+                        borderRadius: BorderRadius.circular(1),
                       ),
                     ),
                   ],

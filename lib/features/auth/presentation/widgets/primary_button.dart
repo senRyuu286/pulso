@@ -35,41 +35,12 @@ class _PrimaryButtonState extends State<PrimaryButton> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
-    final shadowLight = isDark ? AppColors.shadowLightD : AppColors.shadowLightL;
-    final shadowDark = isDark ? AppColors.shadowDarkD : AppColors.shadowDarkL;
     final onPrimary = Theme.of(context).colorScheme.onPrimary;
     final surface = widget.onPressed == null || widget.isLoading ? 0.6 : 1.0;
 
     final decoration = BoxDecoration(
       color: primary,
       borderRadius: BorderRadius.circular(12),
-      boxShadow: _isPressed
-          ? [
-              BoxShadow(
-                color: shadowDark.withValues(alpha: 0.95),
-                offset: const Offset(4, 4),
-                blurRadius: 8,
-                blurStyle: BlurStyle.inner,
-              ),
-              BoxShadow(
-                color: shadowLight.withValues(alpha: 0.6),
-                offset: const Offset(-4, -4),
-                blurRadius: 8,
-                blurStyle: BlurStyle.inner,
-              ),
-            ]
-          : [
-              BoxShadow(
-                color: shadowLight.withValues(alpha: 0.9),
-                offset: const Offset(-6, -6),
-                blurRadius: 14,
-              ),
-              BoxShadow(
-                color: shadowDark.withValues(alpha: 0.8),
-                offset: const Offset(6, 6),
-                blurRadius: 14,
-              ),
-            ],
     );
 
     return GestureDetector(

@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/pulso_theme_extension.dart';
-import '../../../../core/widgets/neumorphic_container.dart';
-
-/// Inset neumorphic image drop-zone — design spec section 9.
 class ImagePickerField extends StatefulWidget {
   const ImagePickerField({
     super.key,
@@ -57,9 +54,12 @@ class _EmptyZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NeumorphicContainer(
-      state: NeumorphicState.inset,
-      borderRadius: 20,
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Stack(
         children: [
           CustomPaint(
