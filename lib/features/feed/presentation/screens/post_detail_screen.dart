@@ -36,15 +36,21 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final _commentController = TextEditingController();
   bool _sending = false;
   bool _requestedLoad = false;
+  late final CommentNotifier _commentNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _commentNotifier = ref.read(commentNotifierProvider.notifier);
+  }
 
   @override
   void dispose() {
     _commentController.dispose();
-    final notifier = ref.read(commentNotifierProvider.notifier);
     final postId = widget.postId;
     super.dispose();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifier.clear(postId);
+      _commentNotifier.clear(postId);
     });
   }
 
