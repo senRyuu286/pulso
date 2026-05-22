@@ -153,7 +153,6 @@ class _CardHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        Icon(Icons.more_horiz_rounded, color: cs.onSurfaceVariant, size: 20),
       ],
     );
   }

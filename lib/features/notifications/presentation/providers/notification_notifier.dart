@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../../../auth/data/providers/auth_providers.dart';
 import '../../data/providers/notification_providers.dart';
@@ -41,14 +42,18 @@ final notificationNotifierProvider =
 );
 
 class NotificationNotifier extends Notifier<NotificationState> {
+  supabase.RealtimeChannel? _channel;
+
   @override
   NotificationState build() {
-    // Auto-load when a user is authenticated
+    ref.onDispose(_cancelSubscription);
+
     ref.listen(authStateChangesProvider, (previous, next) {
       final userId = next.asData?.value?.id;
       if (userId != null) {
-        Future.microtask(() => load());
+        Future.microtask(() => _loadAndSubscribe(userId));
       } else {
+        _cancelSubscription();
         state = const NotificationInitial();
       }
     });
@@ -60,6 +65,34 @@ class NotificationNotifier extends Notifier<NotificationState> {
 
   String get _userId =>
       ref.read(supabaseClientProvider).auth.currentUser?.id ?? '';
+
+  void _cancelSubscription() {
+    final ch = _channel;
+    if (ch != null) {
+      ref.read(supabaseClientProvider).removeChannel(ch);
+      _channel = null;
+    }
+  }
+
+  Future<void> _loadAndSubscribe(String userId) async {
+    await load();
+    _cancelSubscription();
+    _channel = ref
+        .read(supabaseClientProvider)
+        .channel('notifications:$userId')
+        .onPostgresChanges(
+          event: supabase.PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'notifications',
+          filter: supabase.PostgresChangeFilter(
+            type: supabase.PostgresChangeFilterType.eq,
+            column: 'recipient_id',
+            value: userId,
+          ),
+          callback: (_) => refresh(),
+        )
+        .subscribe();
+  }
 
   Future<void> load() async {
     if (_userId.isEmpty) return;

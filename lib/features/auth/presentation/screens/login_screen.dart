@@ -107,9 +107,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final textSecondary =
         isDark ? AppColors.textSecondaryD : AppColors.textSecondaryL;
     final primary = isDark ? AppColors.primaryD : AppColors.primaryL;
-    final logo = isDark
-        ? Image.asset('assets/logo/logo-dark.png', width: 100)
-        : Image.asset('assets/logo/logo-light.png', width: 100);
     ref.listen<AuthState>(authNotifierProvider, (previous, next) {
       if (next is AuthSuccess) {
         context.go('/feed');
@@ -133,7 +130,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 12),
-                  Center(child: logo),
+                  Center(
+                    child: Text(
+                      'Pulso',
+                      style: AppTextStyles.headline.copyWith(color: primary, fontSize: 42),
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     'Welcome back',

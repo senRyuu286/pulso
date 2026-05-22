@@ -110,9 +110,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   : () => _pickAndUploadAvatar(context, currentUserId),
             ),
           ),
-          SliverPersistentHeader(
+          SliverAppBar(
             pinned: true,
-            delegate: _TabBarDelegate(tabController: _tabController, cs: cs),
+            automaticallyImplyLeading: false,
+            toolbarHeight: 0,
+            bottom: TabBar(
+              controller: _tabController,
+              labelColor: cs.onSurface,
+              unselectedLabelColor: cs.onSurfaceVariant,
+              indicatorColor: cs.onSurface,
+              indicatorWeight: 1.5,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: cs.outline.withValues(alpha: 0.3),
+              tabs: const [
+                Tab(icon: Icon(Icons.grid_on_rounded, size: 22)),
+                Tab(icon: Icon(Icons.repeat_rounded, size: 22)),
+              ],
+            ),
           ),
         ],
         body: TabBarView(
@@ -166,46 +180,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           onCancel: () => Navigator.of(context).pop(),
         );
       },
-    );
-  }
-}
-
-// ─── Tab Bar Delegate ─────────────────────────────────────────────────────────
-
-class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  _TabBarDelegate({required this.tabController, required this.cs});
-
-  final TabController tabController;
-  final ColorScheme cs;
-
-  static const double _height = 46;
-
-  @override
-  double get minExtent => _height;
-  @override
-  double get maxExtent => _height;
-
-  @override
-  bool shouldRebuild(_TabBarDelegate oldDelegate) =>
-      oldDelegate.tabController != tabController;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: cs.surface,
-      child: TabBar(
-        controller: tabController,
-        labelColor: cs.onSurface,
-        unselectedLabelColor: cs.onSurfaceVariant,
-        indicatorColor: cs.onSurface,
-        indicatorWeight: 1.5,
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: cs.outline.withValues(alpha: 0.3),
-        tabs: const [
-          Tab(icon: Icon(Icons.grid_on_rounded, size: 22)),
-          Tab(icon: Icon(Icons.repeat_rounded, size: 22)),
-        ],
-      ),
     );
   }
 }
@@ -305,6 +279,14 @@ class _ProfileHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          if (profile.bio != null && profile.bio!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                profile.bio!,
+                style: AppTextStyles.body.copyWith(color: textPrimary),
+              ),
+            ),
           _ActionButtonRow(profile: profile),
           const SizedBox(height: 8),
         ],
