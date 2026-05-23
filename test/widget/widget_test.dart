@@ -175,12 +175,19 @@ void main() {
         PostCard(post: _testPost, index: 0),
         likeNotifier: _TrackingLikeNotifier(onToggle: () => toggleCalled = true),
       ));
-      await tester.pump();
+      // Advance fake time so Timer(Duration.zero) in PostCard.initState fires,
+      // which starts _entryCtrl — otherwise FadeTransition stays at opacity=0
+      // and RenderAnimatedOpacity blocks all hit-testing.
+      await tester.pump(const Duration(milliseconds: 100));
 
       final likeFinder = find.byIcon(Icons.favorite_border_rounded);
       if (likeFinder.evaluate().isNotEmpty) {
         await tester.tap(likeFinder.first);
-        await tester.pumpAndSettle();
+        // A bare pump() records AnimationController._startTime on the first
+        // vsync tick; the subsequent pump(300ms) then advances elapsed time so
+        // the press/release animations complete and toggleLike() is called.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
         expect(toggleCalled, isTrue);
       }
     });
@@ -290,7 +297,11 @@ void main() {
       await tester.pump();
 
       await tester.tap(find.byType(LikeButton));
-      await tester.pumpAndSettle();
+      // Bare pump() sets AnimationController._startTime on the first vsync tick.
+      // The subsequent pump(300ms) then advances elapsed time so the press/release
+      // animations in LikeButton._onTap() complete and toggleLike() is called.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(toggleCalled, isTrue);
     });
