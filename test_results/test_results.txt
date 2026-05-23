@@ -1,0 +1,39 @@
+
+
+✓ AuthService signUp returns AuthSuccess with correct user on success
+✓ AuthService signUp returns AuthError on failure
+✓ AuthService signIn sets session and returns AuthSuccess
+✓ AuthService signIn returns AuthError on invalid credentials
+✓ AuthService signOut clears session and transitions to AuthInitial
+✓ PostRepository createPost inserts record and calls repository with correct payload
+✓ PostRepository fetchFeed returns List<Post>
+✓ PostRepository fetchFeed FeedNotifier transitions to FeedLoaded
+✓ PostRepository deletePost removes the record
+✓ LikeRepository toggleLike correctly inserts when not liked
+✓ LikeRepository toggleLike correctly deletes when already liked
+✓ LikeRepository toggleLike LikeNotifier optimistically updates state
+✓ LikeRepository likeCount returns an integer
+✓ LikeRepository likeCount returns 0 when there are no likes
+✓ CommentRepository addComment persists with correct payload
+✓ CommentRepository addComment CommentNotifier.addComment updates state
+✓ CommentRepository fetchComments returns correct post-scoped list
+✓ CommentRepository fetchComments returns empty list for a post with no comments
+✓ FollowRepository follow inserts a follow record
+✓ FollowRepository follow FollowNotifier.toggle calls follow when not following
+✓ FollowRepository unfollow deletes a follow record
+✓ FollowRepository unfollow FollowNotifier.toggle calls unfollow when already following
+✓ FollowRepository isFollowing returns true when following
+✓ FollowRepository isFollowing returns false when not following
+
+✓ PostCard renders image
+✓ PostCard renders caption
+✓ PostCard renders like count
+✓ PostCard tapping like button triggers provider method
+✓ CommentList renders list of comments
+✓ CommentList shows empty state when no comments
+✓ LikeButton shows correct filled icon when liked
+✓ LikeButton shows correct unfilled icon when not liked
+✓ LikeButton onTap calls provider method
+✓ ProfileAvatar renders avatar image from URL
+✓ ProfileAvatar shows placeholder on null URL
+✓ ProfileAvatar shows placeholder on empty URL
