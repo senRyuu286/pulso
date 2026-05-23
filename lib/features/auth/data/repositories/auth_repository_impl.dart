@@ -22,13 +22,17 @@ class AuthRepositoryImpl implements AuthRepository {
       final response = await client.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'username': username,
+          'display_name': displayName,
+        },
       );
       final user = response.user;
       if (user == null) {
         throw const UnknownAuthException('Unable to create account.');
       }
 
-      await client.from('profiles').insert({
+      await client.from('profiles').upsert({
         'id': user.id,
         'username': username,
         'display_name': displayName,

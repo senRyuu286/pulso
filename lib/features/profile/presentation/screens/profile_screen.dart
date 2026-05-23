@@ -264,7 +264,7 @@ class _ProfileHeader extends StatelessWidget {
                       style: AppTextStyles.title.copyWith(color: textPrimary),
                     ),
                     Text(
-                      profile.username.isNotEmpty ? profile.username : 'user',
+                      profile.username.isNotEmpty ? '@${profile.username}' : '@user',
                       style: AppTextStyles.body.copyWith(color: textSecondary),
                     ),
                     const SizedBox(height: 8),

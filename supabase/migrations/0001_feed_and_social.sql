@@ -135,6 +135,9 @@ DROP POLICY IF EXISTS "comment_likes_delete_policy" ON public.comment_likes;
 CREATE POLICY "profiles_select_policy" ON public.profiles
   FOR SELECT TO authenticated USING (true);
 
+CREATE POLICY "profiles_insert_policy" ON public.profiles
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "profiles_update_policy" ON public.profiles
   FOR UPDATE TO authenticated USING (auth.uid() = id);
 
