@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Status-In_Development-yellow?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-Completed-green?style=flat-square" alt="Status">
 </p>
 
 ---
@@ -43,7 +43,7 @@ In the modern digital landscape, social products rely on four critical foundatio
 | **State Management** | Riverpod  |
 | **Backend** | Supabase  |
 | **Navigation** | GoRouter |
-| **Testing** | flutter_test + Mockito |
+| **Testing** | flutter_test + Mocktail |
 
 ## Setup & Environment
 
@@ -62,7 +62,7 @@ To protect sensitive credentials, this project uses environment variables for Su
    ```
    Ensure your `.env` file contains the following keys (found in your Supabase Project Settings > API):
    * `SUPABASE_URL`: Your Supabase project URL.
-   * `SUPABASE_PUBLISHABLE_KEY`: Your Supabase anonymous (anon) public key.
+   * `SUPABASE_PUBLISHABLE_KEY`: Your Supabase Publishable key.
 
 3. **Install dependencies:**
    ```bash
@@ -70,13 +70,70 @@ To protect sensitive credentials, this project uses environment variables for Su
    ```
 
 4. **Run the app:**
-   You can run the app using the `.env` file or by passing variables directly via `--dart-define`:
+   You can run the app using the `.env` file by passing variables directly via `--dart-define`:
    ```bash
    flutter run --dart-define-from-file=.env
    ```
 
 ## App Screenshots
-*TBI (To Be Inserted)*
+Android Pixel 9 Pro is used for this preview.
+
+<p>
+  <table>
+    <tr>
+      <td align="center">
+        <b>Sign In</b><br>
+        <img width="250" height="auto" alt="Homescreen" src="assets/screenshots/SignIn-Screen.png" />
+      </td>
+      <td align="center">
+        <b>Sign Up</b><br>
+        <img width="250" height="auto" alt="Student Info Form" src="assets/screenshots/SignUp-Screen.png" />
+      </td>
+      <td align="center">
+        <b>Feed</b><br>
+        <img width="250" height="auto" alt="Course Selection" src="assets/screenshots/Feed-Screen.png" />
+      </td>
+    </tr>
+  </table>
+</p>
+
+<p>
+  <table>
+    <tr>
+      <td align="center">
+        <b>Search</b><br>
+        <img width="250" height="auto" alt="Homescreen" src="assets/screenshots/Search-Screen.png" />
+      </td>
+      <td align="center">
+        <b>New Post</b><br>
+        <img width="250" height="auto" alt="Student Info Form" src="assets/screenshots/NewPost-Screen.png" />
+      </td>
+      <td align="center">
+        <b>Notification</b><br>
+        <img width="250" height="auto" alt="Course Selection" src="assets/screenshots/Notifications-Screen.png" />
+      </td>
+    </tr>
+  </table>
+</p>
+
+<p>
+  <table>
+    <tr>
+      <td align="center">
+        <b>Profile</b><br>
+        <img width="250" height="auto" alt="Homescreen" src="assets/screenshots/Profile-Screen.png" />
+      </td>
+      <td align="center">
+        <b>Profile - Edit Avatar</b><br>
+        <img width="250" height="auto" alt="Student Info Form" src="assets/screenshots/Profile-EditAvatar-Screen.png" />
+      </td>
+      <td align="center">
+        <b>Edit Profile</b><br>
+        <img width="250" height="auto" alt="Course Selection" src="assets/screenshots/EditProfile-Screen.png" />
+      </td>
+    </tr>
+  </table>
+</p>
 
 ## Course Context
 Developed for the **Mobile Applications Development** course (Semester 2 Group Project) over a 14-day sprint.
